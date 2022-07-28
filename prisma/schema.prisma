@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                       Int                   @id @default(autoincrement())
+  account                  String                @unique
+  lastTransactionTimeStamp String //only timestamp in naming, it is now tx hash
+  nameTag                  String
+  dataComplete             completeness
+  pendingTransactions      PendingTransactions[]
+}
+
+model PendingTransactions {
+  id                    Int     @id @default(autoincrement())
+  account               Account @relation(fields: [accountId], references: [id])
+  transactionHash       String
+  telegramSentMessageId Int
+  accountId             Int
+}
+
+model BlackListContracts {
+  id         Int    @id @default(autoincrement())
+  contractId String @unique
+}
+
+enum completeness {
+  PENDING
+  HALF
+  COMPLETE
+}
+
+model time {
+  id           Int     @id @default(autoincrement())
+  totalTime    Int     @default(5)
+  sendComplete Boolean @default(true)
+}
