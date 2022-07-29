@@ -10,7 +10,6 @@ const bot = new Composer();
 bot.init = async (mBot) => {
     bot.telegram = mBot.telegram;
 };
-// console.log("started");
 
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 const web3 = createAlchemyWeb3(process.env.ALCHEMY_WEBSOCKET);
@@ -28,6 +27,8 @@ const apiKey = process.env.API_KEY;
 // const address = "0x628254F7513e02865AD6cD4A407dea5B5Da55012";
 const url = process.env.MAIN_NET_URL;
 const baseUrl = process.env.MAIN_BASE_NET_URL;
+// const url = process.env.GOERLI_NET_URL;
+// const baseUrl = process.env.GOERLI_BASE_NET_URL;
 
 const getLastTransaction = async (address) => {
     if (!address) {
@@ -326,6 +327,9 @@ const processPending = async (txn) => {
                 mode: "insensitive",
             },
         },
+        include: {
+            pendingTransactions: true,
+        },
     });
     const account2 = prisma.account.findFirst({
         where: {
@@ -334,10 +338,13 @@ const processPending = async (txn) => {
                 mode: "insensitive",
             },
         },
+        include: {
+            pendingTransactions: true,
+        },
     });
-    console.log({ account1, account2 });
+    // console.log({ account1, account2 });
     const accounts = await Promise.all([account1, account2]);
-    console.log({ accounts });
+    // console.log({ accounts });
     for (let account of accounts) {
         if (!account) {
             continue;
@@ -418,9 +425,13 @@ const subscribe = async () => {
 const main = async () => {
     const configData = await prisma.time.findFirst();
     const setTime = configData?.totalTime;
-    const sendCommplete = configData?.sendComplete || true;
     await subscribe();
     setInterval(async () => {
+        const configData = await prisma.time.findFirst();
+        let sendCommplete = configData?.sendComplete;
+        if (sendCommplete === undefined) {
+            sendCommplete = true;
+        }
         const wallets = await prisma.account.findMany({
             include: { pendingTransactions: true },
         });

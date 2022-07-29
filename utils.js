@@ -4,7 +4,7 @@ const formatSendWallets = (list) => {
         walletData = list[i];
         sent += `${Number(i) + 1} - ${walletData.nameTag} - ${
             walletData.account
-        }`;
+        }\n\n`;
     }
     return sent || "No Wallets registered for listening";
 };
@@ -12,7 +12,7 @@ const formatSendTokens = (list) => {
     let sent = "";
     for (let i in list) {
         tokenData = list[i];
-        sent += `${Number(i) + 1} - ${tokenData.contractId}`;
+        sent += `${Number(i) + 1} - ${tokenData.contractId}\n\n`;
     }
     return sent || "No Tokens in blacklist";
 };
@@ -22,9 +22,7 @@ const formatSendTokens = (list) => {
  * @param {string} value
  */
 const hexaToDecimalPening = (value) => {
-    return (parseInt(value || "0", 16) / 1e18) //u dont need 16 actually
-        .toExponential()
-        .toUpperCase();
+    return parseInt(value || "0", 16) / 1e18; //u dont need 16 actually
 };
 
 /**
@@ -32,9 +30,7 @@ const hexaToDecimalPening = (value) => {
  * @param {string} value
  */
 const toDecimalComplete = (value) => {
-    return (parseInt(value || "0") / 1e18) //u dont need 16 actually
-        .toExponential()
-        .toUpperCase();
+    return parseInt(value || "0") / 1e18;
 };
 
 /**
