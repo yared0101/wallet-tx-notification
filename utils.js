@@ -22,7 +22,7 @@ const formatSendTokens = (list) => {
  * @param {string} value
  */
 const hexaToDecimalPening = (value) => {
-    return parseInt(value || "0", 16) / 1e18; //u dont need 16 actually
+    return (parseInt(value || "0", 16) / 1e18).toFixed(3); //u dont need 16 actually
 };
 
 /**
@@ -30,7 +30,7 @@ const hexaToDecimalPening = (value) => {
  * @param {string} value
  */
 const toDecimalComplete = (value) => {
-    return parseInt(value || "0") / 1e18;
+    return (parseInt(value || "0") / 1e18).toFixed(3);
 };
 
 /**
@@ -91,12 +91,13 @@ const formatSendPending = (txn, wallet, url) => {
  * @param {import('@prisma/client').Account} wallet
  * @returns
  */
-const formatSendComplete = (txn, wallet, url) => {
+const formatSendComplete = (txn, wallet, url, sellValue) => {
+    console.log({ sellValue });
     const isSell = !Boolean(parseInt(txn.value));
     let sentMessage = `Transaction confirmed for Wallet ${wallet.nameTag}:\n\n`;
-    sentMessage += `value ${toDecimalComplete(txn.value)} Ether | ${
-        isSell ? "Sell 🔴" : "Buy 🟢"
-    }\n\n`;
+    sentMessage += `value ${toDecimalComplete(
+        sellValue || txn.value
+    )} Ether | ${isSell ? "Sell 🔴" : "Buy 🟢"}\n\n`;
     sentMessage += `${url}/tx/${txn.hash}`;
 
     return sentMessage;

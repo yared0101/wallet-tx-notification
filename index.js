@@ -45,6 +45,30 @@ const getLastTransaction = async (address) => {
         return undefined;
     }
 };
+/**
+ *
+ * @param {string} transaction
+ * @param {string} targetAcc
+ * @returns
+ */
+const getInternalTransaction = async (transaction, targetAcc) => {
+    try {
+        const data = await axios.get(
+            `https://api.etherscan.io/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`
+        );
+        try {
+            return data.data.result.find(
+                (elem) => elem.to.toLowerCase() === targetAcc.toLowerCase()
+            );
+        } catch (e) {
+            console.log("internal find", e);
+            return undefined;
+        }
+    } catch (e) {
+        console.log("internal out", e);
+        return undefined;
+    }
+};
 
 const minTime = 2;
 const defaultTime = 5;
@@ -319,55 +343,59 @@ bot.command("sendcomplete", async (ctx) => {
  * @param {Array<string>} tokens
  */
 const processPending = async (txn) => {
-    console.log({ txn });
-    const account1 = prisma.account.findFirst({
-        where: {
-            account: {
-                equals: txn.to,
-                mode: "insensitive",
-            },
-        },
-        include: {
-            pendingTransactions: true,
-        },
-    });
-    const account2 = prisma.account.findFirst({
-        where: {
-            account: {
-                equals: txn.from,
-                mode: "insensitive",
-            },
-        },
-        include: {
-            pendingTransactions: true,
-        },
-    });
-    // console.log({ account1, account2 });
-    const accounts = await Promise.all([account1, account2]);
-    // console.log({ accounts });
-    for (let account of accounts) {
-        if (!account) {
-            continue;
-        }
-        const message = formatSendPending(txn, account, baseUrl);
-        const sent = await bot.telegram.sendMessage(
-            process.env.USER_ID,
-            message,
-            {
-                disable_web_page_preview: true,
-            }
-        );
-        await prisma.account.update({
-            where: { id: account.id },
-            data: {
-                pendingTransactions: {
-                    create: {
-                        transactionHash: txn.hash,
-                        telegramSentMessageId: sent.message_id,
-                    },
+    try {
+        console.log({ txn });
+        const account1 = prisma.account.findFirst({
+            where: {
+                account: {
+                    equals: txn.to,
+                    mode: "insensitive",
                 },
             },
+            include: {
+                pendingTransactions: true,
+            },
         });
+        const account2 = prisma.account.findFirst({
+            where: {
+                account: {
+                    equals: txn.from,
+                    mode: "insensitive",
+                },
+            },
+            include: {
+                pendingTransactions: true,
+            },
+        });
+        // console.log({ account1, account2 });
+        const accounts = await Promise.all([account1, account2]);
+        // console.log({ accounts });
+        for (let account of accounts) {
+            if (!account) {
+                continue;
+            }
+            const message = formatSendPending(txn, account, baseUrl);
+            const sent = await bot.telegram.sendMessage(
+                process.env.USER_ID,
+                message,
+                {
+                    disable_web_page_preview: true,
+                }
+            );
+            await prisma.account.update({
+                where: { id: account.id },
+                data: {
+                    pendingTransactions: {
+                        create: {
+                            transactionHash: txn.hash,
+                            telegramSentMessageId: sent.message_id,
+                        },
+                    },
+                },
+            });
+        }
+    } catch (e) {
+        console.log("process pending", e);
     }
 };
 /**
@@ -398,97 +426,122 @@ const isBlackListed = (contractAddress, tokens, pendingData) => {
 };
 
 const subscribe = async () => {
-    await subscription?.[0]?.unsubscribe();
-    await subscription?.[1]?.unsubscribe();
-    const wallets = await prisma.account.findMany();
-    if (wallets.length) {
-        subscription[0] = web3.eth
-            .subscribe("alchemy_pendingTransactions", {
-                fromAddress: wallets.map((elem) => elem.account),
-                hashesOnly: false,
-            })
-            .on("data", (data) => {
-                processPending(data);
-            });
-        subscription[1] = web3.eth
-            .subscribe("alchemy_pendingTransactions", {
-                toAddress: wallets.map((elem) => elem.account),
-                hashesOnly: false,
-            })
-            .on("data", (data) => {
-                processPending(data);
-            });
-        console.log("in", subscription);
+    try {
+        await subscription?.[0]?.unsubscribe();
+        await subscription?.[1]?.unsubscribe();
+        const wallets = await prisma.account.findMany();
+        if (wallets.length) {
+            subscription[0] = web3.eth
+                .subscribe("alchemy_pendingTransactions", {
+                    fromAddress: wallets.map((elem) => elem.account),
+                    hashesOnly: false,
+                })
+                .on("data", (data) => {
+                    processPending(data);
+                });
+            subscription[1] = web3.eth
+                .subscribe("alchemy_pendingTransactions", {
+                    toAddress: wallets.map((elem) => elem.account),
+                    hashesOnly: false,
+                })
+                .on("data", (data) => {
+                    processPending(data);
+                });
+            console.log("in", subscription);
+        }
+        console.log("out", subscription);
+    } catch (e) {
+        console.log("subscribe", e);
     }
-    console.log("out", subscription);
 };
 const main = async () => {
     const configData = await prisma.time.findFirst();
     const setTime = configData?.totalTime;
     await subscribe();
     setInterval(async () => {
-        const configData = await prisma.time.findFirst();
-        let sendCommplete = configData?.sendComplete;
-        if (sendCommplete === undefined) {
-            sendCommplete = true;
-        }
-        const wallets = await prisma.account.findMany({
-            include: { pendingTransactions: true },
-        });
-        const tokens = await prisma.blackListContracts.findMany();
-        for (let wallet of wallets) {
-            if (!wallet.pendingTransactions.length) {
-                continue;
+        try {
+            const configData = await prisma.time.findFirst();
+            let sendCommplete = configData?.sendComplete;
+            if (sendCommplete === undefined) {
+                sendCommplete = true;
             }
-            const lastTransaction = await getLastTransaction(wallet.account);
-            if (!lastTransaction) {
-                continue;
-            }
-            const pendings = wallet.pendingTransactions.map((elem) =>
-                elem.transactionHash.toLowerCase()
-            );
-            const foundIndex = pendings.indexOf(
-                lastTransaction.hash.toLowerCase()
-            );
-            if (foundIndex === -1) {
-                //means no pending
-            } else {
-                // if not in blacklist send completed tx, if it is then edit the text as blacklisted token
-
-                //remove it from pending
-                const foundPending = wallet.pendingTransactions[foundIndex];
-
-                const data = isBlackListed(
-                    lastTransaction.contractAddress.toLowerCase(),
-                    tokens,
-                    foundPending
+            const wallets = await prisma.account.findMany({
+                include: { pendingTransactions: true },
+            });
+            const tokens = await prisma.blackListContracts.findMany();
+            for (let wallet of wallets) {
+                if (!wallet.pendingTransactions.length) {
+                    continue;
+                }
+                const lastTransaction = await getLastTransaction(
+                    wallet.account
                 );
-                await prisma.account.update({
-                    where: { id: wallet.id },
-                    data: {
-                        lastTransactionTimeStamp: lastTransaction.hash,
-                        pendingTransactions: {
-                            delete: {
-                                id: foundPending.id,
+                if (!lastTransaction) {
+                    continue;
+                }
+                const pendings = wallet.pendingTransactions.map((elem) =>
+                    elem.transactionHash.toLowerCase()
+                );
+                const foundIndex = pendings.indexOf(
+                    lastTransaction.hash.toLowerCase()
+                );
+                if (foundIndex === -1) {
+                    //means no pending
+                } else {
+                    // if not in blacklist send completed tx, if it is then edit the text as blacklisted token
+
+                    //remove it from pending
+                    const foundPending = wallet.pendingTransactions[foundIndex];
+
+                    const data = isBlackListed(
+                        lastTransaction.contractAddress?.toLowerCase(),
+                        tokens,
+                        foundPending
+                    );
+                    await prisma.account.update({
+                        where: { id: wallet.id },
+                        data: {
+                            lastTransactionTimeStamp: lastTransaction.hash,
+                            pendingTransactions: {
+                                delete: {
+                                    id: foundPending.id,
+                                },
                             },
                         },
-                    },
-                });
-                if (data || !sendCommplete) {
-                    continue;
-                } else {
-                    await bot.telegram.sendMessage(
-                        process.env.USER_ID,
-                        formatSendComplete(lastTransaction, wallet, baseUrl),
-                        {
-                            reply_to_message_id:
-                                foundPending.telegramSentMessageId,
-                            allow_sending_without_reply: true,
-                            disable_web_page_preview: true,
-                        }
-                    );
+                    });
+                    if (data || !sendCommplete) {
+                        continue;
+                    } else {
+                        const isSell = !Boolean(
+                            parseInt(lastTransaction.value)
+                        );
+                        const extraData =
+                            isSell &&
+                            (await getInternalTransaction(
+                                lastTransaction.hash,
+                                wallet.account
+                            ));
+                        console.log({ extraData });
+                        await bot.telegram.sendMessage(
+                            process.env.USER_ID,
+                            formatSendComplete(
+                                lastTransaction,
+                                wallet,
+                                baseUrl,
+                                isSell && extraData?.value
+                            ),
+                            {
+                                reply_to_message_id:
+                                    foundPending.telegramSentMessageId,
+                                allow_sending_without_reply: true,
+                                disable_web_page_preview: true,
+                            }
+                        );
+                    }
                 }
             }
+        } catch (e) {
+            console.log("set - interval", e);
         }
     }, (setTime || defaultTime) * 1000);
 };
