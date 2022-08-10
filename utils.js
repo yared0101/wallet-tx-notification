@@ -32,7 +32,11 @@ const hexaToDecimalPening = (value) => {
 const toDecimalComplete = (value) => {
     return (parseInt(value || "0") / 1e18).toFixed(3);
 };
-
+/**
+ * @param {{value:string, tokenDecimal:string}} val
+ */
+const realval = (val) =>
+    (parseInt(val.value) / Math.pow(10, parseInt(val.tokenDecimal))).toFixed(0);
 /**
  *
  * @param {{
@@ -89,15 +93,48 @@ const formatSendPending = (txn, wallet, url) => {
  *  confirmations: string,
  * }} txn
  * @param {import('@prisma/client').Account} wallet
+ * @param {{
+ *  blockNumber: string,
+ *  timeStamp: string,
+ *  hash: string,
+ *  nonce: string,
+ *  blockHash: string,
+ *  from: string,
+ *  contractAddress: string,
+ *  to: string,
+ *  value: string,
+ *  tokenName: string,
+ *  tokenSymbol: string,
+ *  tokenDecimal: string,
+ *  transactionIndex: string,
+ *  gas: string,
+ *  gasPrice: string,
+ *  gasUsed: string,
+ *  cumulativeGasUsed: string,
+ *  input: string,
+ *  confirmations: string,
+ * }|null} tokenData
  * @returns
  */
-const formatSendComplete = (txn, wallet, url, sellValue) => {
+const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
     console.log({ sellValue });
     const isSell = !Boolean(parseInt(txn.value));
     let sentMessage = `Transaction confirmed for Wallet ${wallet.nameTag}:\n\n`;
     sentMessage += `value ${toDecimalComplete(
         sellValue || txn.value
     )} Ether | ${isSell ? "Sell 🔴" : "Buy 🟢"}\n\n`;
+    if (tokenData) {
+        if (isSell) {
+            sentMessage += `Swap ${realval(tokenData)} ${
+                tokenData.tokenSymbol
+            } for ${toDecimalComplete(sellValue || txn.value)} Ether`;
+        } else {
+            sentMessage += `Swap ${toDecimalComplete(
+                sellValue || txn.value
+            )} Ether for ${realval(tokenData)} ${tokenData.tokenSymbol}`;
+        }
+        sentMessage += "\n\n";
+    }
     sentMessage += `${url}/tx/${txn.hash}`;
 
     return sentMessage;

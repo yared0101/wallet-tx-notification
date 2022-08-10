@@ -47,6 +47,26 @@ const getLastTransaction = async (address) => {
 };
 /**
  *
+ * @param {string} address
+ * @param {string} hash
+ * @returns
+ */
+const erc20TokenTransferEvents = async (address, hash) => {
+    try {
+        const data = await axios.get(
+            `https://api.etherscan.io/api?module=account&action=tokentx&address=${address}&page=1&offset=100&startblock=0&endblock=27025780&sort=desc&apikey=${apiKey}`
+        );
+        const transferredToken = data.data.result.find(
+            (elem) => elem.hash.toLowerCase() === hash.toLowerCase()
+        );
+        return transferredToken;
+    } catch (e) {
+        console.log(e);
+        return undefined;
+    }
+};
+/**
+ *
  * @param {string} transaction
  * @param {string} targetAcc
  * @returns
@@ -400,6 +420,53 @@ const processPending = async (txn) => {
 };
 /**
  *
+ * @param {{
+ *  blockNumber: string,
+ *  timeStamp: string,
+ *  hash: string,
+ *  blockHash: string,
+ *  transactionIndex: string,
+ *  from: string,
+ *  to: string,
+ *  value: string,
+ *  gas: string,
+ *  gasPrice: string,
+ *  isError: string,
+ *  txreceipt_status: string,
+ *  input: string,
+ *  contractAddress: string,
+ *  cumulativeGasUsed: string,
+ *  gasUsed: string,
+ *  confirmations: string,
+ * }} txn
+ * @param {import('@prisma/client').Account} wallet
+ * @returns
+ */
+const processCompleted = async (txn, wallet) => {
+    const isSell = !Boolean(parseInt(txn.value));
+    const extraData =
+        isSell && (await getInternalTransaction(txn.hash, wallet.account));
+    const tokenData = await erc20TokenTransferEvents(wallet.account, txn.hash);
+    console.log({ extraData, tokenData });
+    await bot.telegram.sendMessage(
+        // process.env.USER_ID,
+        process.env.GROUP_ID,
+        formatSendComplete(
+            txn,
+            wallet,
+            baseUrl,
+            isSell && extraData?.value,
+            tokenData
+        ),
+        {
+            // reply_to_message_id: foundPending.telegramSentMessageId,
+            // allow_sending_without_reply: true,
+            disable_web_page_preview: true,
+        }
+    );
+};
+/**
+ *
  * @param {string} contractAddress all in small
  * @param {import("@prisma/client").BlackListContracts[]} tokens
  * @param {import("@prisma/client").PendingTransactions} pendingData
@@ -512,31 +579,9 @@ const main = async () => {
                     if (data || !sendCommplete) {
                         continue;
                     } else {
-                        const isSell = !Boolean(
-                            parseInt(lastTransaction.value)
-                        );
-                        const extraData =
-                            isSell &&
-                            (await getInternalTransaction(
-                                lastTransaction.hash,
-                                wallet.account
-                            ));
-                        console.log({ extraData });
-                        await bot.telegram.sendMessage(
-                            process.env.USER_ID,
-                            formatSendComplete(
-                                lastTransaction,
-                                wallet,
-                                baseUrl,
-                                isSell && extraData?.value
-                            ),
-                            {
-                                reply_to_message_id:
-                                    foundPending.telegramSentMessageId,
-                                allow_sending_without_reply: true,
-                                disable_web_page_preview: true,
-                            }
-                        );
+                        if(lastTransaction?.isError === '0'){
+                            processCompleted(lastTransaction, wallet);
+                        }
                     }
                 }
             }
