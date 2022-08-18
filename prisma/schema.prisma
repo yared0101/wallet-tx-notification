@@ -17,6 +17,7 @@ model Account {
   nameTag                  String
   dataComplete             completeness
   pendingTransactions      PendingTransactions[]
+  channel                  Channel[]
 }
 
 model PendingTransactions {
@@ -42,4 +43,16 @@ model time {
   id           Int     @id @default(autoincrement())
   totalTime    Int     @default(5)
   sendComplete Boolean @default(true)
+}
+
+model Channel {
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  channelId    String
+  wallets      Account[]
+  sendPending  Boolean   @default(true)
+  sendComplete Boolean   @default(true)
+  sendBuyTx    Boolean   @default(true)
+  sendSellTx   Boolean   @default(true)
 }

@@ -1,3 +1,5 @@
+const { displayStrings } = require("../config");
+
 const formatSendWallets = (list) => {
     let sent = "";
     for (let i in list) {
@@ -8,6 +10,23 @@ const formatSendWallets = (list) => {
     }
     return sent || "No Wallets registered for listening";
 };
+/**
+ *
+ * @param {import('@prisma/client').Channel[]} list
+ * @returns
+ */
+const formatSendChannels = (list) => {
+    let sent = "";
+    for (let i in list) {
+        const channel = list[i];
+        sent += `${Number(i) + 1} - ${channel.name}\n\n`;
+    }
+    return (
+        sent ||
+        `No Channels added, Please use the button \n${displayStrings.addChannel}\nto add more`
+    );
+};
+
 const formatSendTokens = (list) => {
     let sent = "";
     for (let i in list) {
@@ -19,9 +38,21 @@ const formatSendTokens = (list) => {
 
 /**
  *
+ * @param {import('@prisma/client').Channel} channel
+ */
+const formatSendDetailChannel = (channel) => {
+    return `--    CHANNEL ${channel.name.toUpperCase()}
+
+name:  ${channel.name}
+username:  ${channel.channelId}
+    `;
+};
+
+/**
+ *
  * @param {string} value
  */
-const hexaToDecimalPening = (value) => {
+const hexaToDecimalPending = (value) => {
     return (parseInt(value || "0", 16) / 1e18).toFixed(3); //u dont need 16 actually
 };
 
@@ -64,7 +95,7 @@ const realval = (val) =>
 const formatSendPending = (txn, wallet, url) => {
     const isSell = !Boolean(parseInt(txn.value));
     let sentMessage = `New Transaction for Wallet ${wallet.nameTag}:\n\n`;
-    sentMessage += `value ${hexaToDecimalPening(txn.value)} Ether | ${
+    sentMessage += `value ${hexaToDecimalPending(txn.value)} Ether | ${
         isSell ? "Sell 🔴" : "Buy 🟢"
     }\n\n`;
     sentMessage += `${url}/tx/${txn.hash}`;
@@ -139,10 +170,38 @@ const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
 
     return sentMessage;
 };
-
+/**
+ *
+ * @param {string} contractAddress all in small
+ * @param {import("@prisma/client").BlackListContracts[]} tokens
+ * @param {import("@prisma/client").PendingTransactions} pendingData
+ */
+const isBlackListed = (contractAddress, tokens, pendingData) => {
+    const addressesArray = tokens.map((elem) => elem.contractId.toLowerCase());
+    const foundIndex = addressesArray.indexOf(contractAddress);
+    if (foundIndex === -1) {
+        return false;
+    } else {
+        // try {
+        //     bot.telegram.sendMessage(
+        //         process.env.USER_ID,
+        //         "BlackListed Transaction",
+        //         {
+        //             reply_to_message_id: pendingData.telegramSentMessageId,
+        //             allow_sending_without_reply: true,
+        //             disable_notification: true,
+        //         }
+        //     );
+        // } catch (e) {}
+        return true;
+    }
+};
 module.exports = {
     formatSendTokens,
     formatSendWallets,
     formatSendComplete,
     formatSendPending,
+    formatSendChannels,
+    isBlackListed,
+    formatSendDetailChannel,
 };
