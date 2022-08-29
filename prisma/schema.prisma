@@ -55,4 +55,5 @@ model Channel {
   sendComplete Boolean   @default(true)
   sendBuyTx    Boolean   @default(true)
   sendSellTx   Boolean   @default(true)
+  minimumEther Float?
 }

@@ -24,6 +24,14 @@ module.exports = (bot) => {
                     }
                     await removeWallet(ctx, number);
                 } else if (
+                    session[ctx.chat.id]?.[displayStrings.removeChannel]
+                ) {
+                    const number = parseInt(ctx.message.text);
+                    if (isNaN(number)) {
+                        return await ctx.reply("please send a number value");
+                    }
+                    await removeChannel(ctx, number);
+                } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.removeWalletFromChannel
                     ]
@@ -33,6 +41,18 @@ module.exports = (bot) => {
                         return await ctx.reply("please send a number value");
                     }
                     await removeWalletFromChannel(ctx, number);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
+                        displayStrings.channelSelected.setMinimumEther
+                    ]
+                ) {
+                    const number = Number(ctx.message.text);
+                    if (isNaN(number) || number < 0) {
+                        return await ctx.reply(
+                            "please send a number value greater than 0"
+                        );
+                    }
+                    await setMinimumEther(ctx, number);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.addWalletToChannel
@@ -52,7 +72,9 @@ module.exports = (bot) => {
                 } else {
                     await ctx.reply(
                         "please use one of the buttons",
-                        markups.homeMarkup
+                        session[ctx.chat.id]?.selectedChannelId
+                            ? markups.selectedChannel
+                            : markups.homeMarkup
                     );
                 }
             } catch (e) {
@@ -175,10 +197,35 @@ const removeWallet = async (ctx, number) => {
             },
         });
         session[ctx.chat.id] = {};
-        await ctx.reply(
-            "wallet removed from channel successfully",
-            markups.homeMarkup
-        );
+        await ctx.reply("wallet removed successfully", markups.homeMarkup);
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const removeChannel = async (ctx, number) => {
+    let ses = session[ctx.chat.id][displayStrings.removeChannel];
+    const channels = ses.channels;
+    try {
+        if (number > channels.length || number < 1) {
+            return await ctx.reply(
+                `please send number between 1 and ${channels.length}`
+            );
+        }
+        const deletedChannelId = channels[number - 1].id;
+        await prisma.channel.delete({
+            where: {
+                id: deletedChannelId,
+            },
+        });
+        session[ctx.chat.id] = {};
+        await ctx.reply("Channel removed successfully", markups.homeMarkup);
     } catch (e) {
         console.log(e);
         return await ctx.reply("something went wrong");
@@ -227,6 +274,41 @@ const removeWalletFromChannel = async (ctx, number) => {
         return await ctx.reply("something went wrong");
     }
 };
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const setMinimumEther = async (ctx, number) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.channelSelected.setMinimumEther
+        ]; //{}
+    try {
+        const channelId = session[ctx.chat.id].selectedChannelId;
+        const channel = await prisma.channel.findFirst({
+            where: { channelId: channelId },
+        });
+        await prisma.channel.update({
+            where: {
+                id: channel.id,
+            },
+            data: {
+                minimumEther: number || null,
+            },
+        });
+        session[ctx.chat.id].setting = {};
+        await ctx.reply(
+            `minimum ether value has been ${number ? "set" : "unset"}`,
+            markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
 /**
  *
  * @param {import('telegraf').Context} ctx

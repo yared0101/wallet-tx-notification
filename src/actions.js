@@ -25,7 +25,9 @@ module.exports = (bot) => {
             console.log(e);
             await ctx.reply("something went wrong");
         } finally {
-            ctx.answerCbQuery();
+            try {
+                await ctx.answerCbQuery();
+            } catch {}
         }
     });
     bot.action(/config_.*/, async (ctx) => {
@@ -72,7 +74,9 @@ module.exports = (bot) => {
             console.log(e);
             await ctx.reply("something went wrong");
         } finally {
-            ctx.answerCbQuery();
+            try {
+                await ctx.answerCbQuery();
+            } catch {}
         }
     });
 };

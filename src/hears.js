@@ -17,12 +17,12 @@ module.exports = (bot) => {
     });
     bot.hears(displayStrings.addWallet, async (ctx) => {
         session[ctx.chat.id] = { [displayStrings.addWallet]: {} };
-        await ctx.reply("please send wallet number");
+        await ctx.reply("please send wallet address");
     });
     bot.hears(displayStrings.removeWallet, async (ctx) => {
         try {
             const wallets = await prisma.account.findMany({
-                orderBy: { account: "asc" },
+                orderBy: { id: "asc" },
             });
             session[ctx.chat.id] = {
                 [displayStrings.removeWallet]: {
@@ -31,6 +31,20 @@ module.exports = (bot) => {
             };
             await ctx.reply(formatSendWallets(wallets));
             await ctx.reply("please send wallet number from the list");
+        } catch (e) {}
+    });
+    bot.hears(displayStrings.removeChannel, async (ctx) => {
+        try {
+            const channels = await prisma.channel.findMany({
+                orderBy: { id: "asc" },
+            });
+            session[ctx.chat.id] = {
+                [displayStrings.removeChannel]: {
+                    channels: channels,
+                },
+            };
+            await ctx.reply(formatSendChannels(channels));
+            await ctx.reply("please send channel number from the list");
         } catch (e) {}
     });
     bot.hears(displayStrings.listWallets, async (ctx) => {
@@ -61,7 +75,7 @@ module.exports = (bot) => {
                             },
                         },
                     },
-                    orderBy: { account: "asc" },
+                    orderBy: { id: "asc" },
                 });
                 session[ctx.chat.id].setting = {
                     [displayStrings.channelSelected.addWalletToChannel]: {
@@ -92,7 +106,7 @@ module.exports = (bot) => {
                             },
                         },
                     },
-                    orderBy: { account: "asc" },
+                    orderBy: { id: "asc" },
                 });
                 if (!wallets.length) {
                     return await ctx.reply(
@@ -109,6 +123,22 @@ module.exports = (bot) => {
             } catch (e) {}
         }
     );
+    bot.hears(displayStrings.channelSelected.setMinimumEther, async (ctx) => {
+        if (!session[ctx.chat.id]?.selectedChannelId) {
+            await ctx.reply(
+                "no channel has been selected to set minimum ether to, please select channel"
+            );
+            return await selectChannel(ctx);
+        }
+        try {
+            session[ctx.chat.id].setting = {
+                [displayStrings.channelSelected.setMinimumEther]: {},
+            };
+            await ctx.reply(
+                "please send minimum ether value, send 0 to unset minimum value"
+            );
+        } catch (e) {}
+    });
     bot.hears(displayStrings.channelSelected.editChannel, async (ctx) => {
         if (!session[ctx.chat.id]?.selectedChannelId) {
             await ctx.reply(
@@ -151,7 +181,7 @@ module.exports = (bot) => {
                 await ctx.reply(
                     formatSendWallets(
                         await prisma.account.findMany({
-                            orderBy: { account: "asc" },
+                            orderBy: { id: "asc" },
                             where: {
                                 channel: {
                                     some: {
@@ -177,7 +207,7 @@ module.exports = (bot) => {
 const selectChannel = async (ctx) => {
     try {
         const channels = await prisma.channel.findMany({
-            orderBy: { channelId: "asc" },
+            orderBy: { id: "asc" },
         });
         const message = formatSendChannels(channels);
         const mark = markups.selectChannelMarkup(channels);
@@ -195,11 +225,12 @@ const listChannels = async (ctx) => {
         await ctx.reply(
             formatSendChannels(
                 await prisma.channel.findMany({
-                    orderBy: { channelId: "asc" },
+                    orderBy: { id: "asc" },
                 })
             )
         );
     } catch (e) {
+        console.log(e);
         await ctx.reply("something went wrong");
     }
 };
@@ -213,7 +244,7 @@ const listWallets = async (ctx) => {
         await ctx.reply(
             formatSendWallets(
                 await prisma.account.findMany({
-                    orderBy: { account: "asc" },
+                    orderBy: { id: "asc" },
                 })
             )
         );

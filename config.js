@@ -25,6 +25,7 @@ const displayStrings = {
         listWalletsInChannel: "List Wallets",
         channelSettings: "Channel Settings",
         editChannel: "Edit Channel",
+        setMinimumEther: "Set Minimum Ether",
     },
     channelConfigs: {
         sendPending: (status) => beauty(`Send Pending`, status),
@@ -85,6 +86,11 @@ const markups = {
                     {
                         text: displayStrings.channelSelected.channelSettings,
                     },
+                    {
+                        text: displayStrings.channelSelected.setMinimumEther,
+                    },
+                ],
+                [
                     {
                         text: displayStrings.channelSelected
                             .listWalletsInChannel,
@@ -158,11 +164,11 @@ const session = {};
 
 const minTime = 2;
 const defaultTime = 5;
-const url = process.env.GOERLI_NET_URL;
-const baseUrl = process.env.GOERLI_BASE_NET_URL;
+// const url = process.env.GOERLI_NET_URL;
+// const baseUrl = process.env.GOERLI_BASE_NET_URL;
 // const address = "0x628254F7513e02865AD6cD4A407dea5B5Da55012";
-// const url = process.env.MAIN_NET_URL;
-// const baseUrl = process.env.MAIN_BASE_NET_URL;
+const url = process.env.MAIN_NET_URL;
+const baseUrl = process.env.MAIN_BASE_NET_URL;
 
 module.exports = {
     displayStrings,

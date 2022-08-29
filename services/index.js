@@ -3,6 +3,7 @@ const {
     formatSendComplete,
     formatSendPending,
     isBlackListed,
+    toDecimalComplete,
 } = require("../utils");
 const {
     getInternalTransaction,
@@ -33,7 +34,21 @@ const {
  */
 const processPending = async (txn) => {
     const isSell = !Boolean(parseInt(txn.value));
-    const filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
+    const filter = isSell
+        ? { sendSellTx: true }
+        : {
+              sendBuyTx: true,
+              OR: [
+                  {
+                      minimumEther: {
+                          lte: Number(toDecimalComplete(txn.value)),
+                      },
+                  },
+                  {
+                      minimumEther: null,
+                  },
+              ],
+          };
 
     try {
         const account1 = prisma.account.findFirst({
@@ -124,7 +139,24 @@ const processPending = async (txn) => {
  */
 const processCompleted = async (txn, wallet) => {
     const isSell = !Boolean(parseInt(txn.value));
-    const filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
+    const extraData =
+        isSell && (await getInternalTransaction(txn.hash, wallet.account));
+    let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
+    filter = {
+        ...filter,
+        OR: [
+            {
+                minimumEther: {
+                    lte: Number(
+                        toDecimalComplete(extraData?.value || txn.value)
+                    ),
+                },
+            },
+            {
+                minimumEther: null,
+            },
+        ],
+    };
     const channels = await prisma.channel.findMany({
         where: {
             wallets: {
@@ -136,8 +168,6 @@ const processCompleted = async (txn, wallet) => {
             ...filter,
         },
     });
-    const extraData =
-        isSell && (await getInternalTransaction(txn.hash, wallet.account));
     const tokenData = await erc20TokenTransferEvents(wallet.account, txn.hash);
     const message = formatSendComplete(
         txn,

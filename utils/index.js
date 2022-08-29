@@ -43,8 +43,9 @@ const formatSendTokens = (list) => {
 const formatSendDetailChannel = (channel) => {
     return `--    CHANNEL ${channel.name.toUpperCase()}
 
-name:  ${channel.name}
-username:  ${channel.channelId}
+Name:  ${channel.name}
+Username:  ${channel.channelId}
+Minimum Ether:  ${channel.minimumEther || "Not Set"}
     `;
 };
 
@@ -204,4 +205,5 @@ module.exports = {
     formatSendChannels,
     isBlackListed,
     formatSendDetailChannel,
+    toDecimalComplete,
 };
