@@ -102,7 +102,7 @@ const addChannel = async (ctx) => {
         }
         const channel = await prisma.channel.create({
             data: {
-                channelId: sentChannel.username,
+                channelId: `${sentChannel.id}`,
                 name: sentChannel.title,
             },
         });

@@ -57,7 +57,7 @@ const markups = {
         },
     },
     selectChannelMarkup: (channels) => {
-        const spliceNum = channels.length > 9 ? 3 : 2;
+        const spliceNum = channels.length >= 9 ? 3 : 2;
         let inlineKeyboard = [];
         let counter = 0;
         for (; channels.length; ) {
@@ -69,6 +69,7 @@ const markups = {
                     callback_data: `selectChannel_${elem.channelId}`,
                 }))
             );
+            counter += thisPushed.length - 1;
         }
         return {
             reply_markup: {

@@ -44,7 +44,7 @@ const formatSendDetailChannel = (channel) => {
     return `--    CHANNEL ${channel.name.toUpperCase()}
 
 Name:  ${channel.name}
-Username:  ${channel.channelId}
+Username(id):  ${channel.channelId}
 Minimum Ether:  ${channel.minimumEther || "Not Set"}
     `;
 };
