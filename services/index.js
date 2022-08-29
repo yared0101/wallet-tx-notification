@@ -89,7 +89,7 @@ const processPending = async (txn) => {
             const message = formatSendPending(txn, account, baseUrl);
             for (let channel of account.channel) {
                 const data = await bot.telegram.sendMessage(
-                    `@${channel.channelId}`,
+                    `${channel.channelId}`,
                     message,
                     {
                         disable_web_page_preview: true,
@@ -178,7 +178,7 @@ const processCompleted = async (txn, wallet) => {
     );
     for (let channel of channels) {
         await bot.telegram.sendMessage(
-            `@${channel.channelId}`,
+            `${channel.channelId}`,
             // process.env.GROUP_ID,
             message,
             {
