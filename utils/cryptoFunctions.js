@@ -33,10 +33,17 @@ const erc20TokenTransferEvents = async (address, hash) => {
         const data = await axios.get(
             `${url}/api?module=account&action=tokentx&address=${address}&page=1&offset=100&startblock=0&endblock=27025780&sort=desc&apikey=${apiKey}`
         );
-        const transferredToken = data.data.result.find(
+        const transferredToken = data.data.result.filter(
             (elem) => elem.hash.toLowerCase() === hash.toLowerCase()
         );
-        return transferredToken;
+        return [
+            transferredToken.find(
+                (elem) => elem.from.toLowerCase() === address.toLowerCase()
+            ),
+            transferredToken.find(
+                (elem) => elem.to.toLowerCase() === address.toLowerCase()
+            ),
+        ].filter((elem) => elem);
     } catch (e) {
         console.log(e);
         return undefined;
@@ -96,9 +103,20 @@ const subscribe = async (processPending) => {
         console.log("subscribe", e);
     }
 };
+const getTokenInfo = async (contractAddress) => {
+    // const contractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    try {
+        const metadata = await web3.alchemy.getTokenMetadata(contractAddress);
+        return metadata;
+    } catch (e) {
+        console.log("internal out", e);
+        return undefined;
+    }
+};
 module.exports = {
     erc20TokenTransferEvents,
     getInternalTransaction,
     getLastTransaction,
     subscribe,
+    getTokenInfo,
 };

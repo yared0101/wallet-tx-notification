@@ -1,4 +1,4 @@
-const { displayStrings } = require("../config");
+const { displayStrings, buyTokens } = require("../config");
 
 const formatSendWallets = (list) => {
     let sent = "";
@@ -9,6 +9,14 @@ const formatSendWallets = (list) => {
         }\n\n`;
     }
     return sent || "No Wallets registered for listening";
+};
+const formatSendTokens = (list) => {
+    let sent = "";
+    for (let i in list) {
+        token = list[i];
+        sent += `${Number(i) + 1} - ${token.name} - ${token.contractId}\n\n`;
+    }
+    return sent || "No tokens added in blacklist";
 };
 /**
  *
@@ -25,15 +33,6 @@ const formatSendChannels = (list) => {
         sent ||
         `No Channels added, Please use the button \n${displayStrings.addChannel}\nto add more`
     );
-};
-
-const formatSendTokens = (list) => {
-    let sent = "";
-    for (let i in list) {
-        tokenData = list[i];
-        sent += `${Number(i) + 1} - ${tokenData.contractId}\n\n`;
-    }
-    return sent || "No Tokens in blacklist";
 };
 
 /**
@@ -94,10 +93,19 @@ const realval = (val) =>
  * @returns
  */
 const formatSendPending = (txn, wallet, url) => {
+    const isSwap = Boolean(txn.input);
+    const isFromTransfer =
+        txn.from.toLowerCase() === wallet.account.toLowerCase();
     const isSell = !Boolean(parseInt(txn.value));
-    let sentMessage = `New Transaction for Wallet ${wallet.nameTag}:\n\n`;
+    let sentMessage = `${
+        isSwap
+            ? "New Transaction for Wallet"
+            : isFromTransfer
+            ? "Outgoing Transfer from"
+            : "Incoming Transfer to"
+    } ${wallet.nameTag} ${isSwap ? "" : "(Pending)"}:\n\n`;
     sentMessage += `value ${hexaToDecimalPending(txn.value)} Ether | ${
-        isSell ? "Sell 🔴" : "Buy 🟢"
+        isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
     }\n\n`;
     sentMessage += `${url}/tx/${txn.hash}`;
 
@@ -145,27 +153,60 @@ const formatSendPending = (txn, wallet, url) => {
  *  cumulativeGasUsed: string,
  *  input: string,
  *  confirmations: string,
- * }|null} tokenData
+ * }[]} tokenData
  * @returns
  */
 const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
-    console.log({ sellValue });
+    const isSwap = Boolean(txn.input);
     const isSell = !Boolean(parseInt(txn.value));
-    let sentMessage = `Transaction confirmed for Wallet ${wallet.nameTag}:\n\n`;
-    sentMessage += `value ${toDecimalComplete(
-        sellValue || txn.value
-    )} Ether | ${isSell ? "Sell 🔴" : "Buy 🟢"}\n\n`;
-    if (tokenData) {
-        if (isSell) {
-            sentMessage += `Swap ${realval(tokenData)} ${
-                tokenData.tokenSymbol
-            } for ${toDecimalComplete(sellValue || txn.value)} Ether`;
+    const isFromTransfer =
+        txn.from.toLowerCase() === wallet.account.toLowerCase();
+    let sentMessage = `${
+        isSwap
+            ? "Transaction confirmed for"
+            : isFromTransfer
+            ? "Outgoing Transfer from"
+            : "Incoming Transfer to"
+    } ${wallet.nameTag} ${isSwap ? "" : "(Completed)"}:\n\n`;
+    if (tokenData?.length) {
+        if (tokenData.length === 2) {
+            if (
+                buyTokens.find((elem) => elem === tokenData[0].contractAddress)
+            ) {
+                sentMessage += "Buy 🟢";
+            } else {
+                sentMessage += "Sell 🔴";
+            }
+            console.log(tokenData[0].contractAddress, buyTokens);
+            sentMessage += ` ${realval(tokenData[0])} ${
+                tokenData[0].tokenSymbol
+            } for ${realval(tokenData[1])} ${tokenData[1].tokenSymbol}`;
         } else {
-            sentMessage += `Swap ${toDecimalComplete(
+            sentMessage += `value ${toDecimalComplete(
                 sellValue || txn.value
-            )} Ether for ${realval(tokenData)} ${tokenData.tokenSymbol}`;
+            )} Ether | ${
+                isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
+            }\n\n`;
+            tokenData = tokenData[0];
+            const etherVal = Number(toDecimalComplete(sellValue || txn.value));
+            if (!etherVal) return false;
+            if (isSell) {
+                sentMessage += `Swap ${realval(tokenData)} ${
+                    tokenData.tokenSymbol
+                } for ${etherVal} Ether`;
+            } else {
+                sentMessage += `Swap ${etherVal} Ether for ${realval(
+                    tokenData
+                )} ${tokenData.tokenSymbol}`;
+            }
         }
         sentMessage += "\n\n";
+    } else {
+        sentMessage += `value ${toDecimalComplete(
+            sellValue || txn.value
+        )} Ether | ${
+            isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
+        }\n\n`;
     }
     sentMessage += `${url}/tx/${txn.hash}`;
 

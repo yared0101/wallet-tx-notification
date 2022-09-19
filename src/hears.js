@@ -1,5 +1,9 @@
 const { displayStrings, session, markups, prisma } = require("../config");
-const { formatSendWallets, formatSendChannels } = require("../utils");
+const {
+    formatSendWallets,
+    formatSendChannels,
+    formatSendTokens,
+} = require("../utils");
 /**
  *
  * @param {import("telegraf").Composer} bot
@@ -110,7 +114,7 @@ module.exports = (bot) => {
                 });
                 if (!wallets.length) {
                     return await ctx.reply(
-                        `no wallet found in the channel, please use \n${displayStrings.channelSelected.removeWalletFromChannel}\nto add wallet`
+                        `no wallet found in the channel, please use \n${displayStrings.channelSelected.addWalletToChannel}\nto add wallet`
                     );
                 }
                 session[ctx.chat.id].setting = {
@@ -197,6 +201,169 @@ module.exports = (bot) => {
             } catch (e) {
                 await ctx.reply("something went wrong");
             }
+        }
+    );
+    bot.hears(
+        displayStrings.channelSelected.viewBlackListToken,
+        async (ctx) => {
+            try {
+                if (!session[ctx.chat.id]?.selectedChannelId) {
+                    await ctx.reply(
+                        "no channel has been selected to add wallet to, please select channel"
+                    );
+                    return await selectChannel(ctx);
+                }
+                await ctx.reply(
+                    formatSendTokens(
+                        (
+                            await prisma.channel.findFirst({
+                                where: {
+                                    channelId:
+                                        session[ctx.chat.id].selectedChannelId,
+                                },
+                                include: {
+                                    blackListedTokens: true,
+                                },
+                            })
+                        )?.blackListedTokens
+                    )
+                );
+            } catch (e) {
+                console.log(e);
+                await ctx.reply("something went wrong");
+            }
+        }
+    );
+    bot.hears(displayStrings.channelSelected.addBlackListToken, async (ctx) => {
+        if (!session[ctx.chat.id]?.selectedChannelId) {
+            await ctx.reply(
+                "no channel has been selected to add token to, please select channel"
+            );
+            return await selectChannel(ctx);
+        }
+        try {
+            session[ctx.chat.id].setting = {
+                [displayStrings.channelSelected.addBlackListToken]: {},
+            };
+            await ctx.reply("please send token address");
+        } catch (e) {}
+    });
+    bot.hears(
+        displayStrings.channelSelected.removeBlackListToken,
+        async (ctx) => {
+            if (!session[ctx.chat.id]?.selectedChannelId) {
+                await ctx.reply(
+                    "no channel has been selected to remove token from, please select channel"
+                );
+                return await selectChannel(ctx);
+            }
+            try {
+                const tokens = (
+                    await prisma.channel.findFirst({
+                        where: {
+                            channelId: session[ctx.chat.id].selectedChannelId,
+                        },
+                        include: {
+                            blackListedTokens: true,
+                        },
+                    })
+                )?.blackListedTokens;
+                if (!tokens.length) {
+                    return await ctx.reply(
+                        `no token found in the channel, please use \n${displayStrings.channelSelected.addBlackListToken}\nto add token to blacklist`
+                    );
+                }
+                session[ctx.chat.id].setting = {
+                    [displayStrings.channelSelected.removeBlackListToken]: {
+                        tokens,
+                    },
+                };
+                await ctx.reply(formatSendTokens(tokens));
+                await ctx.reply("please send token number from the list");
+            } catch (e) {}
+        }
+    );
+    bot.hears(
+        displayStrings.channelSelected.viewBuyBlackListToken,
+        async (ctx) => {
+            try {
+                if (!session[ctx.chat.id]?.selectedChannelId) {
+                    await ctx.reply(
+                        "no channel has been selected! please select channel"
+                    );
+                    return await selectChannel(ctx);
+                }
+                await ctx.reply(
+                    formatSendTokens(
+                        (
+                            await prisma.channel.findFirst({
+                                where: {
+                                    channelId:
+                                        session[ctx.chat.id].selectedChannelId,
+                                },
+                                include: {
+                                    buyBlackListedTokens: true,
+                                },
+                            })
+                        )?.buyBlackListedTokens
+                    )
+                );
+            } catch (e) {
+                console.log(e);
+                await ctx.reply("something went wrong");
+            }
+        }
+    );
+    bot.hears(
+        displayStrings.channelSelected.addBuyBlackListToken,
+        async (ctx) => {
+            if (!session[ctx.chat.id]?.selectedChannelId) {
+                await ctx.reply(
+                    "no channel has been selected to add token to, please select channel"
+                );
+                return await selectChannel(ctx);
+            }
+            try {
+                session[ctx.chat.id].setting = {
+                    [displayStrings.channelSelected.addBuyBlackListToken]: {},
+                };
+                await ctx.reply("please send token address");
+            } catch (e) {}
+        }
+    );
+    bot.hears(
+        displayStrings.channelSelected.removeBuyBlackListToken,
+        async (ctx) => {
+            if (!session[ctx.chat.id]?.selectedChannelId) {
+                await ctx.reply(
+                    "no channel has been selected to remove token from, please select channel"
+                );
+                return await selectChannel(ctx);
+            }
+            try {
+                const tokens = (
+                    await prisma.channel.findFirst({
+                        where: {
+                            channelId: session[ctx.chat.id].selectedChannelId,
+                        },
+                        include: {
+                            buyBlackListedTokens: true,
+                        },
+                    })
+                )?.buyBlackListedTokens;
+                if (!tokens.length) {
+                    return await ctx.reply(
+                        `no token found in the channel, please use \n${displayStrings.channelSelected.addBuyBlackListToken}\nto add token to blacklist`
+                    );
+                }
+                session[ctx.chat.id].setting = {
+                    [displayStrings.channelSelected.removeBuyBlackListToken]: {
+                        tokens,
+                    },
+                };
+                await ctx.reply(formatSendTokens(tokens));
+                await ctx.reply("please send token number from the list");
+            } catch (e) {}
         }
     );
 };

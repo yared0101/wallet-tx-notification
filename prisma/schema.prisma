@@ -26,11 +26,18 @@ model PendingTransactions {
   transactionHash       String
   telegramSentMessageId Int
   accountId             Int
+
+  @@unique([transactionHash, accountId])
 }
 
 model BlackListContracts {
-  id         Int    @id @default(autoincrement())
-  contractId String @unique
+  id            Int      @id @default(autoincrement())
+  contractId    String
+  name          String
+  sellChannel   Channel? @relation(fields: [sellChannelId], references: [id], "sellBlacklist")
+  sellChannelId Int?
+  buyChannel    Channel? @relation(fields: [buyChannelId], references: [id], "buyBlacklist")
+  buyChannelId  Int?
 }
 
 enum completeness {
@@ -46,14 +53,18 @@ model time {
 }
 
 model Channel {
-  id           Int       @id @default(autoincrement())
-  name         String
-  description  String?
-  channelId    String
-  wallets      Account[]
-  sendPending  Boolean   @default(true)
-  sendComplete Boolean   @default(true)
-  sendBuyTx    Boolean   @default(true)
-  sendSellTx   Boolean   @default(true)
-  minimumEther Float?
+  id                   Int                  @id @default(autoincrement())
+  name                 String
+  description          String?
+  channelId            String
+  wallets              Account[]
+  sendPending          Boolean              @default(true)
+  sendComplete         Boolean              @default(true)
+  sendBuyTx            Boolean              @default(true)
+  sendSellTx           Boolean              @default(true)
+  incomingTransfer     Boolean              @default(true)
+  outGoingTransfer     Boolean              @default(true)
+  blackListedTokens    BlackListContracts[] @relation("sellBlacklist")
+  buyBlackListedTokens BlackListContracts[] @relation("buyBlacklist")
+  minimumEther         Float?
 }
