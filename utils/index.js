@@ -99,11 +99,11 @@ const formatSendPending = (txn, wallet, url) => {
     const isSell = !Boolean(parseInt(txn.value));
     let sentMessage = `${
         isSwap
-            ? "New Transaction for Wallet"
+            ? "Swap for Wallet "
             : isFromTransfer
             ? "Outgoing Transfer from"
             : "Incoming Transfer to"
-    } ${wallet.nameTag} ${isSwap ? "" : "(Pending)"}:\n\n`;
+    } ${wallet.nameTag} (Pending):\n\n`;
     sentMessage += `value ${hexaToDecimalPending(txn.value)} Ether | ${
         isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
     }\n\n`;
@@ -163,11 +163,11 @@ const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
         txn.from.toLowerCase() === wallet.account.toLowerCase();
     let sentMessage = `${
         isSwap
-            ? "Transaction confirmed for"
+            ? "Swap for Wallet "
             : isFromTransfer
             ? "Outgoing Transfer from"
             : "Incoming Transfer to"
-    } ${wallet.nameTag} ${isSwap ? "" : "(Completed)"}:\n\n`;
+    } ${wallet.nameTag} (Completed):\n\n`;
     if (tokenData?.length) {
         if (tokenData.length === 2) {
             if (
