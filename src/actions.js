@@ -59,6 +59,12 @@ module.exports = (bot) => {
             if (toggle === "SELL") {
                 updated = { sendSellTx: !channel.sendSellTx };
             }
+            if (toggle === "INCOMING") {
+                updated = { incomingTransfer: !channel.incomingTransfer };
+            }
+            if (toggle === "OUTGOING") {
+                updated = { outGoingTransfer: !channel.outGoingTransfer };
+            }
             const updatedChannel = await prisma.channel.update({
                 where: { id: channel.id },
                 data: updated,

@@ -1,7 +1,11 @@
 const { session, prisma, markups, displayStrings } = require("../config");
 const { processPending } = require("../services");
 const { formatSendDetailChannel } = require("../utils");
-const { subscribe, getLastTransaction } = require("../utils/cryptoFunctions");
+const {
+    subscribe,
+    getLastTransaction,
+    getTokenInfo,
+} = require("../utils/cryptoFunctions");
 
 /**
  *
@@ -43,6 +47,26 @@ module.exports = (bot) => {
                     await removeWalletFromChannel(ctx, number);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
+                        displayStrings.channelSelected.removeBlackListToken
+                    ]
+                ) {
+                    const number = parseInt(ctx.message.text);
+                    if (isNaN(number)) {
+                        return await ctx.reply("please send a number value");
+                    }
+                    await removeTokenFromChannel(ctx, number);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
+                        displayStrings.channelSelected.removeBuyBlackListToken
+                    ]
+                ) {
+                    const number = parseInt(ctx.message.text);
+                    if (isNaN(number)) {
+                        return await ctx.reply("please send a number value");
+                    }
+                    await removeBuyTokenFromChannel(ctx, number);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.setMinimumEther
                     ]
                 ) {
@@ -63,6 +87,20 @@ module.exports = (bot) => {
                         return await ctx.reply("please send a number value");
                     }
                     await addWalletToChannel(ctx, number);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
+                        displayStrings.channelSelected.addBlackListToken
+                    ]
+                ) {
+                    const address = ctx.message.text;
+                    await addTokenToChannel(ctx, address);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
+                        displayStrings.channelSelected.addBuyBlackListToken
+                    ]
+                ) {
+                    const address = ctx.message.text;
+                    await addBuyTokenToChannel(ctx, address);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.editChannel
@@ -280,6 +318,96 @@ const removeWalletFromChannel = async (ctx, number) => {
  * @param {import('telegraf').Context} ctx
  * @param {number} number
  */
+const removeTokenFromChannel = async (ctx, number) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.channelSelected.removeBlackListToken
+        ];
+    const tokens = ses.tokens;
+    try {
+        if (number > tokens.length || number < 1) {
+            return await ctx.reply(
+                `please send number between 1 and ${tokens.length}`
+            );
+        }
+        const deletedToken = tokens[number - 1];
+        const removedFromChannelId = session[ctx.chat.id].selectedChannelId;
+        const channel = await prisma.channel.findFirst({
+            where: { channelId: removedFromChannelId },
+        });
+        await prisma.channel.update({
+            where: {
+                id: channel.id,
+            },
+            data: {
+                blackListedTokens: {
+                    delete: {
+                        id: deletedToken.id,
+                    },
+                },
+            },
+        });
+        session[ctx.chat.id].setting = {};
+        await ctx.reply(
+            "token removed from sell blacklist successfully",
+            markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const removeBuyTokenFromChannel = async (ctx, number) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.channelSelected.removeBuyBlackListToken
+        ];
+    const tokens = ses.tokens;
+    try {
+        if (number > tokens.length || number < 1) {
+            return await ctx.reply(
+                `please send number between 1 and ${tokens.length}`
+            );
+        }
+        const deletedToken = tokens[number - 1];
+        const removedFromChannelId = session[ctx.chat.id].selectedChannelId;
+        const channel = await prisma.channel.findFirst({
+            where: { channelId: removedFromChannelId },
+        });
+        await prisma.channel.update({
+            where: {
+                id: channel.id,
+            },
+            data: {
+                buyBlackListedTokens: {
+                    delete: {
+                        id: deletedToken.id,
+                    },
+                },
+            },
+        });
+        session[ctx.chat.id].setting = {};
+        await ctx.reply(
+            "token removed from buy blacklist successfully",
+            markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
 const setMinimumEther = async (ctx, number) => {
     let ses =
         session[ctx.chat.id].setting[
@@ -344,6 +472,90 @@ const addWalletToChannel = async (ctx, number) => {
         session[ctx.chat.id].setting = {};
         await ctx.reply(
             "wallet added to channel successfully",
+            markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const addTokenToChannel = async (ctx, token) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.channelSelected.addBlackListToken
+        ];
+    try {
+        const tokenData = await getTokenInfo(token);
+        if (!tokenData) {
+            return ctx.reply("couldn't get token info");
+        }
+        const channel = await prisma.channel.findFirst({
+            where: {
+                channelId: session[ctx.chat.id].selectedChannelId,
+            },
+        });
+        const updatedChannel = await prisma.channel.update({
+            where: { id: channel.id },
+            data: {
+                blackListedTokens: {
+                    create: {
+                        contractId: token,
+                        name: tokenData.symbol,
+                    },
+                },
+            },
+        });
+        session[ctx.chat.id].setting = {};
+        await ctx.reply(
+            "token added to sell blacklist successfully",
+            markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const addBuyTokenToChannel = async (ctx, token) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.channelSelected.addBuyBlackListToken
+        ];
+    try {
+        const tokenData = await getTokenInfo(token);
+        if (!tokenData) {
+            return ctx.reply("couldn't get token info");
+        }
+        const channel = await prisma.channel.findFirst({
+            where: {
+                channelId: session[ctx.chat.id].selectedChannelId,
+            },
+        });
+        const updatedChannel = await prisma.channel.update({
+            where: { id: channel.id },
+            data: {
+                buyBlackListedTokens: {
+                    create: {
+                        contractId: token,
+                        name: tokenData.symbol,
+                    },
+                },
+            },
+        });
+        session[ctx.chat.id].setting = {};
+        await ctx.reply(
+            "token added to buy blacklist successfully",
             markups.selectedChannel
         );
     } catch (e) {

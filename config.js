@@ -1,13 +1,13 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-// const { Telegraf } = require("telegraf");
-// const bot = new Telegraf(process.env.BOT_TOKEN);
+const { Telegraf } = require("telegraf");
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const { Composer } = require("micro-bot");
-const bot = new Composer();
-bot.init = async (mBot) => {
-    bot.telegram = mBot.telegram;
-};
+// const { Composer } = require("micro-bot");
+// const bot = new Composer();
+// bot.init = async (mBot) => {
+//     bot.telegram = mBot.telegram;
+// };
 
 const beauty = (value, status) =>
     `${value}${status === true ? "🟢" : status === false ? "🔴" : ""}`;
@@ -26,12 +26,20 @@ const displayStrings = {
         channelSettings: "Channel Settings",
         editChannel: "Edit Channel",
         setMinimumEther: "Set Minimum Ether",
+        addBlackListToken: "Add Sell BlackList token",
+        viewBlackListToken: "View Sell BlackList token",
+        removeBlackListToken: "Remove Sell BlackList token",
+        addBuyBlackListToken: "Add Buy BlackList token",
+        viewBuyBlackListToken: "View Buy BlackList token",
+        removeBuyBlackListToken: "Remove Buy BlackList token",
     },
     channelConfigs: {
         sendPending: (status) => beauty(`Send Pending`, status),
         sendComplete: (status) => beauty(`Send Complete`, status),
         sendSellTx: (status) => beauty(`Send Sell Txns`, status),
         sendBuyTx: (status) => beauty(`Send Buy Txns`, status),
+        sendIncoming: (status) => beauty(`Send Incoming Tfers`, status),
+        sendOutgoing: (status) => beauty(`Send Outgoing Tfers`, status),
     },
     home: "Home",
 };
@@ -93,6 +101,32 @@ const markups = {
                 ],
                 [
                     {
+                        text: displayStrings.channelSelected.addBlackListToken,
+                    },
+                    {
+                        text: displayStrings.channelSelected
+                            .removeBlackListToken,
+                    },
+                    {
+                        text: displayStrings.channelSelected.viewBlackListToken,
+                    },
+                ],
+                [
+                    {
+                        text: displayStrings.channelSelected
+                            .addBuyBlackListToken,
+                    },
+                    {
+                        text: displayStrings.channelSelected
+                            .removeBuyBlackListToken,
+                    },
+                    {
+                        text: displayStrings.channelSelected
+                            .viewBuyBlackListToken,
+                    },
+                ],
+                [
+                    {
                         text: displayStrings.channelSelected
                             .listWalletsInChannel,
                     },
@@ -116,7 +150,7 @@ const markups = {
     },
     /**
      *
-     * @param {{sendPending:boolean, sendComplete:boolean, sendBuyTx:boolean, sendSellTx:boolean}} currentValues
+     * @param {{sendPending:boolean, sendComplete:boolean, sendBuyTx:boolean, sendSellTx:boolean, incomingTransfer:boolean, outGoingTransfer:boolean}} currentValues
      * @returns
      */
     channelSettingsInline: ({
@@ -124,6 +158,8 @@ const markups = {
         sendComplete,
         sendBuyTx,
         sendSellTx,
+        incomingTransfer,
+        outGoingTransfer,
     }) => ({
         reply_markup: {
             inline_keyboard: [
@@ -155,6 +191,20 @@ const markups = {
                         callback_data: "config_SELL",
                     },
                 ],
+                [
+                    {
+                        text: displayStrings.channelConfigs.sendIncoming(
+                            incomingTransfer
+                        ),
+                        callback_data: "config_INCOMING",
+                    },
+                    {
+                        text: displayStrings.channelConfigs.sendOutgoing(
+                            outGoingTransfer
+                        ),
+                        callback_data: "config_OUTGOING",
+                    },
+                ],
             ],
             resize_keyboard: true,
         },
@@ -171,6 +221,12 @@ const defaultTime = 5;
 const url = process.env.MAIN_NET_URL;
 const baseUrl = process.env.MAIN_BASE_NET_URL;
 
+const buyTokens = [
+    "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "0x6b175474e89094c44da98b954eedeac495271d0f",
+];
+
 module.exports = {
     displayStrings,
     markups,
@@ -181,4 +237,5 @@ module.exports = {
     bot,
     url,
     baseUrl,
+    buyTokens,
 };
