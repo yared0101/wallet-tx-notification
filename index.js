@@ -16,7 +16,7 @@ require("./src/raw_inputs")(bot);
 bot.launch({
     webhook: {
         domain: 'http://159.223.228.24',
-        port: 80
+        port: 8080
     }});
 // module.exports = bot;
 console.log("started");
