@@ -1,13 +1,13 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-// const { Telegraf } = require("telegraf");
-// const bot = new Telegraf(process.env.BOT_TOKEN);
+const { Telegraf } = require("telegraf");
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const { Composer } = require("micro-bot");
-const bot = new Composer();
-bot.init = async (mBot) => {
-    bot.telegram = mBot.telegram;
-};
+// const { Composer } = require("micro-bot");
+// const bot = new Composer();
+// bot.init = async (mBot) => {
+//     bot.telegram = mBot.telegram;
+// };
 
 const beauty = (value, status) =>
     `${value}${status === true ? "🟢" : status === false ? "🔴" : ""}`;
