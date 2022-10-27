@@ -13,6 +13,10 @@ require("./src/commands")(bot);
 require("./src/actions")(bot);
 require("./src/hears")(bot);
 require("./src/raw_inputs")(bot);
-bot.launch();
+bot.launch({
+    webhook: {
+        domain: 'http://159.223.228.24',
+        port: 80
+    }});
 // module.exports = bot;
 console.log("started");
