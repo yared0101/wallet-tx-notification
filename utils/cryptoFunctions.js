@@ -7,16 +7,29 @@ const web3 = createAlchemyWeb3(process.env.ALCHEMY_WEBSOCKET);
 // if server not running it means socket connection is lost so that's good enough
 var subscription = [];
 const apiKey = process.env.API_KEY;
-const getLastTransaction = async (address) => {
+/**
+ * sends in last or given transaction data from given wallet address
+ * @param {string} address wallet address
+ * @param {string} transactionHash if exists, sends this transaction data instead of the last txn
+ * @returns
+ */
+const getLastTransaction = async (address, transactionHash) => {
     if (!address) {
         return undefined;
     }
     try {
         const data = await axios.get(
-            `${url}/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`
+            `${url}/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=0&sort=desc&apikey=${apiKey}`
         );
-        const lastTransaction = data.data.result[0];
-        return lastTransaction;
+        if (transactionHash) {
+            const lastTransaction = data.data.result.find(
+                (elem) => elem.hash.toLowerCase() === transactionHash
+            );
+            return lastTransaction;
+        } else {
+            const lastTransaction = data.data.result[0];
+            return lastTransaction;
+        }
     } catch (e) {
         console.log(e.message);
         return undefined;
@@ -56,6 +69,7 @@ const erc20TokenTransferEvents = async (address, hash) => {
  * @returns
  */
 const getInternalTransaction = async (transaction, targetAcc) => {
+    // return undefined;
     try {
         const data = await axios.get(
             `${url}/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`

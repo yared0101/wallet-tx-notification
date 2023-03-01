@@ -1,3 +1,4 @@
+const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups, displayStrings } = require("../config");
 const { processPending } = require("../services");
 const { formatSendDetailChannel } = require("../utils");
@@ -96,6 +97,23 @@ module.exports = (bot) => {
                     await addTokenToChannel(ctx, address);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
+                        displayStrings.fileCompareOptions.addBlackListToken
+                    ]
+                ) {
+                    const address = ctx.message.text;
+                    await addTokenToFileBlackList(ctx, address);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
+                        displayStrings.fileCompareOptions.removeBlackListToken
+                    ]
+                ) {
+                    const number = parseInt(ctx.message.text);
+                    if (isNaN(number)) {
+                        return await ctx.reply("please send a number value");
+                    }
+                    await removeTokenFromFileBlacklist(ctx, number);
+                } else if (
+                    session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.addBuyBlackListToken
                     ]
                 ) {
@@ -118,6 +136,41 @@ module.exports = (bot) => {
             } catch (e) {
                 console.log(e);
                 await ctx.reply("something went wrong");
+            }
+        } else {
+            //when document is sent
+            console.log(ctx.message.document);
+            if (ctx.message.document) {
+                if (session[ctx.chat.id]?.fileCompare) {
+                    if (session[ctx.chat.id]?.fileCompare?.addFile) {
+                        if (ctx.message.document.mime_type === "text/csv") {
+                            session[ctx.chat.id].fileCompare.files.push(
+                                ctx.message.document.file_id
+                            );
+                            const fileLength =
+                                session[ctx.chat.id].fileCompare.files.length;
+                            await ctx.reply(
+                                `${fileLength} files sent. you can send more files ${
+                                    fileLength > 1
+                                        ? `or press ${displayStrings.fileCompareOptions.displayResults} to process files`
+                                        : ""
+                                }`
+                            );
+                        } else {
+                            await ctx.reply("Please send csv file");
+                        }
+                    } else {
+                        await ctx.reply(
+                            `please press ${displayStrings.fileCompareOptions.addFile} to start adding files`,
+                            markups.fileCompareMarkup
+                        );
+                    }
+                } else {
+                    await ctx.reply(
+                        "please use one of the buttons",
+                        markups.homeMarkup
+                    );
+                }
             }
         }
     });
@@ -349,7 +402,11 @@ const removeTokenFromChannel = async (ctx, number) => {
         });
         session[ctx.chat.id].setting = {};
         await ctx.reply(
-            "token removed from sell blacklist successfully",
+            `token removed from sell ${
+                channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
+                    ? "white"
+                    : "black"
+            }list successfully`,
             markups.selectedChannel
         );
     } catch (e) {
@@ -394,7 +451,11 @@ const removeBuyTokenFromChannel = async (ctx, number) => {
         });
         session[ctx.chat.id].setting = {};
         await ctx.reply(
-            "token removed from buy blacklist successfully",
+            `token removed from buy ${
+                channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
+                    ? "white"
+                    : "black"
+            }list successfully`,
             markups.selectedChannel
         );
     } catch (e) {
@@ -513,7 +574,11 @@ const addTokenToChannel = async (ctx, token) => {
         });
         session[ctx.chat.id].setting = {};
         await ctx.reply(
-            "token added to sell blacklist successfully",
+            `token added to sell ${
+                channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
+                    ? "white"
+                    : "black"
+            }list successfully`,
             markups.selectedChannel
         );
     } catch (e) {
@@ -555,8 +620,104 @@ const addBuyTokenToChannel = async (ctx, token) => {
         });
         session[ctx.chat.id].setting = {};
         await ctx.reply(
-            "token added to buy blacklist successfully",
+            `token added to buy ${
+                channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
+                    ? "white"
+                    : "black"
+            }list successfully`,
             markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await ctx.reply("something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {string} text
+ */
+const addTokenToFileBlackList = async (ctx, text) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.fileCompareOptions.addBlackListToken
+        ];
+    if (!ses.number) {
+        ses.number = text.toLowerCase();
+        session[ctx.chat.id].setting[
+            displayStrings.fileCompareOptions.addBlackListToken
+        ] = ses;
+        return await ctx.reply("please send wallet name tag");
+    } else if (!ses.nameTag) {
+        ses.nameTag = text;
+        try {
+            const account = ses.number;
+            let nameTag = ses.nameTag;
+            if (!(account[0] === "0" && account[1] === "x")) {
+                ctx.reply("please send a proper wallet that starts with 0x");
+                return;
+            }
+            await ctx.reply("... processing address");
+
+            const prev = await prisma.blackListTokensForFiles.findFirst({
+                where: { contractId: account },
+            });
+            if (prev) {
+                ctx.reply("token already exists");
+                return;
+            }
+            // const data = await getLastTransaction(account);
+            // if (!data?.hash) {
+            //     return await ctx.reply(
+            //         "couldn't get last transaction of wallet, please try again"
+            //     );
+            // }
+            await prisma.blackListTokensForFiles.create({
+                data: {
+                    contractId: account,
+                    name: nameTag,
+                },
+            });
+
+            delete session[ctx.chat.id].settings;
+            await ctx.reply(
+                `token \n${nameTag}\nadded to blacklist successfully`,
+                markups.fileCompareMarkup
+            );
+        } catch (e) {
+            console.log(e);
+            return;
+        }
+        //send to one of the commands
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {number} number
+ */
+const removeTokenFromFileBlacklist = async (ctx, number) => {
+    let ses =
+        session[ctx.chat.id].setting[
+            displayStrings.fileCompareOptions.removeBlackListToken
+        ];
+    const tokens = ses.tokens;
+    try {
+        if (number > tokens.length || number < 1) {
+            return await ctx.reply(
+                `please send number between 1 and ${tokens.length}`
+            );
+        }
+        const deletedToken = tokens[number - 1];
+        await prisma.blackListTokensForFiles.delete({
+            where: { id: deletedToken.id },
+        });
+        delete session[ctx.chat.id].setting;
+        await ctx.reply(
+            "token removed from blacklist successfully",
+            markups.fileCompareMarkup
         );
     } catch (e) {
         console.log(e);

@@ -13,11 +13,13 @@ require("./src/commands")(bot);
 require("./src/actions")(bot);
 require("./src/hears")(bot);
 require("./src/raw_inputs")(bot);
-bot.launch({
-    webhook: {
-        domain: process.env.BOT_DOMAIN,
-        port: 8080,
-    },
-});
+process.env.NODE_ENV === "development"
+    ? bot.launch()
+    : bot.launch({
+          webhook: {
+              domain: process.env.BOT_DOMAIN,
+              port: 8080,
+          },
+      });
 module.exports = bot;
 console.log("started");
