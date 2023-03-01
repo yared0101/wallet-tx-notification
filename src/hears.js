@@ -389,10 +389,8 @@ module.exports = (bot) => {
         try {
             session[ctx.chat.id] = {
                 fileCompare: {
-                    files: [
-                        "BQACAgQAAxkBAAIrbmP893bHX5gAARML-VbADduoBaWZ2gAC1g8AAlmU4VOmX2ZF6uCqcS4E",
-                        "BQACAgQAAxkBAAIrb2P893bnJNRPMnJDyC8RdA7c0uANAAIMDQACMdZwUxVvDJkNsCB1LgQ",
-                    ],
+                    // files: ["BQACAgQAAxkBAAIrbmP893bHX5gAARML-VbADduoBaWZ2gAC1g8AAlmU4VOmX2ZF6uCqcS4E","BQACAgQAAxkBAAIrb2P893bnJNRPMnJDyC8RdA7c0uANAAIMDQACMdZwUxVvDJkNsCB1LgQ",],
+                    files: [],
                     addFile: true,
                 },
             };
