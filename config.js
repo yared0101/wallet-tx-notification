@@ -1,8 +1,26 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { Telegraf } = require("telegraf");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+const winston = require("winston");
+const { Logtail } = require("@logtail/node");
+const { LogtailTransport } = require("@logtail/winston");
+
+// Create a Logtail client
+const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN);
+const { combine, timestamp, json } = winston.format;
+
+var path = require("path");
+var scriptName = path.basename(__filename);
+// console.log(scriptName);
+// console.log("abebe");
+// Create a Winston logger - passing in the Logtail transport
+const logger = winston.createLogger({
+    transports: [new LogtailTransport(logtail)],
+    level: process.env.LOG_LEVEL || "info",
+    format: combine(timestamp(), json()),
+});
 // const { Composer } = require("micro-bot");
 // const bot = new Composer();
 // bot.init = async (mBot) => {
@@ -26,12 +44,12 @@ const displayStrings = {
         channelSettings: "Channel Settings",
         editChannel: "Edit Channel",
         setMinimumEther: "Set Minimum Ether",
-        addBlackListToken: "Add Sell BlackList token",
-        viewBlackListToken: "View Sell BlackList token",
-        removeBlackListToken: "Remove Sell BlackList token",
-        addBuyBlackListToken: "Add Buy BlackList token",
-        viewBuyBlackListToken: "View Buy BlackList token",
-        removeBuyBlackListToken: "Remove Buy BlackList token",
+        addBlackListToken: "Add Sell token to black/white list",
+        viewBlackListToken: "View Sell token black/white list",
+        removeBlackListToken: "Remove Sell token black/white list",
+        addBuyBlackListToken: "Add Buy token black/white list",
+        viewBuyBlackListToken: "View Buy token black/white list",
+        removeBuyBlackListToken: "Remove Buy token black/white list",
     },
     channelConfigs: {
         sendPending: (status) => beauty(`Send Pending`, status),
@@ -40,8 +58,23 @@ const displayStrings = {
         sendBuyTx: (status) => beauty(`Send Buy Txns`, status),
         sendIncoming: (status) => beauty(`Send Incoming Tfers`, status),
         sendOutgoing: (status) => beauty(`Send Outgoing Tfers`, status),
+        channelType: (type) =>
+            `Channel type -  ${
+                type === CHANNEL_BLACK_LIST_TYPE.BLACKLIST
+                    ? "BLACKLIST ⚫"
+                    : "WHITELIST ⚪"
+            }`,
     },
     home: "Home",
+    fileCompare: "Find Matching Tokens",
+    fileCompareOptions: {
+        addFile: "Add File",
+        displayResults: "Display Results",
+        cleanFiles: "Remove All Uploaded",
+        addBlackListToken: "Add Black List Token",
+        removeBlackListToken: "Remove Black list Token",
+        listBlackListToken: "List Black List Tokens",
+    },
 };
 const markups = {
     homeMarkup: {
@@ -60,6 +93,7 @@ const markups = {
                     { text: displayStrings.removeChannel },
                     { text: displayStrings.removeWallet },
                 ],
+                [{ text: displayStrings.fileCompare }],
             ],
             resize_keyboard: true,
         },
@@ -160,6 +194,7 @@ const markups = {
         sendSellTx,
         incomingTransfer,
         outGoingTransfer,
+        type,
     }) => ({
         reply_markup: {
             inline_keyboard: [
@@ -205,10 +240,53 @@ const markups = {
                         callback_data: "config_OUTGOING",
                     },
                 ],
+                [
+                    {
+                        text: displayStrings.channelConfigs.channelType(type),
+                        callback_data: "config_TYPE",
+                    },
+                ],
             ],
             resize_keyboard: true,
         },
     }),
+    fileCompareMarkup: {
+        reply_markup: {
+            resize_keyboard: true,
+            keyboard: [
+                [
+                    {
+                        text: displayStrings.fileCompareOptions.addFile,
+                    },
+                    {
+                        text: displayStrings.fileCompareOptions.displayResults,
+                    },
+                    {
+                        text: displayStrings.fileCompareOptions.cleanFiles,
+                    },
+                ],
+                [
+                    {
+                        text: displayStrings.fileCompareOptions
+                            .addBlackListToken,
+                    },
+                    {
+                        text: displayStrings.fileCompareOptions
+                            .removeBlackListToken,
+                    },
+                ],
+                [
+                    {
+                        text: displayStrings.fileCompareOptions
+                            .listBlackListToken,
+                    },
+                    {
+                        text: displayStrings.home,
+                    },
+                ],
+            ],
+        },
+    },
 };
 
 const session = {};
@@ -226,7 +304,6 @@ const buyTokens = [
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "0x6b175474e89094c44da98b954eedeac495271d0f",
 ];
-
 module.exports = {
     displayStrings,
     markups,
@@ -238,4 +315,5 @@ module.exports = {
     url,
     baseUrl,
     buyTokens,
+    logger,
 };

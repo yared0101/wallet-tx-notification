@@ -1,8 +1,8 @@
-const { baseUrl, prisma, bot, buyTokens } = require("../config");
+const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
+const { baseUrl, prisma, bot, buyTokens, logger } = require("../config");
 const {
     formatSendComplete,
     formatSendPending,
-    isBlackListed,
     toDecimalComplete,
 } = require("../utils");
 const {
@@ -36,9 +36,19 @@ const processPending = async (txn) => {
     const alreadyTx = await prisma.pendingTransactions.findFirst({
         where: { transactionHash: { equals: txn.hash, mode: "insensitive" } },
     });
+    logger.info({
+        type: "PENDING",
+        trace: "/services/index.js - line number 39",
+        found: txn.hash,
+        alreadyTx,
+    });
     if (alreadyTx) {
         return;
     }
+    logger.info({
+        pendingTxn: txn,
+        trace: "/services/index.js - line number 39",
+    });
     const isSwap = !(txn.input === "" || txn.input === "0x");
     if (!isSwap) {
         txn.input = "";
@@ -150,13 +160,21 @@ const processPending = async (txn) => {
  *  cumulativeGasUsed: string,
  *  gasUsed: string,
  *  confirmations: string,
+ *  functionName: string | null,
  * }} txn
  * @param {import('@prisma/client').Account} wallet
  * @returns
  */
 const processCompleted = async (txn, wallet) => {
+    logger.info({
+        type: "COMPLETE",
+        trace: "/services/index.js - line number 39",
+        txn,
+        wallet,
+    });
     const isSell = !Boolean(parseInt(txn.value));
     const isSwap = !(txn.input === "" || txn.input === "0x");
+    const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
         txn.input = "";
     }
@@ -210,12 +228,13 @@ const processCompleted = async (txn, wallet) => {
         wallet,
         baseUrl,
         isSell && extraData?.value,
-        tokenData
+        tokenData,
+        isApprove
     );
     for (let channel of channels) {
         const tokens = tokenData.map((elem) => elem.contractAddress);
         let send = message ? true : false;
-        console.log({ send });
+        console.log({ send1: send });
         let realBuy = false;
         if (tokenData && tokenData.length === 2) {
             if (
@@ -228,6 +247,7 @@ const processCompleted = async (txn, wallet) => {
             console.log({ buy: channel.buyBlackListedTokens });
             for (let token of channel.buyBlackListedTokens) {
                 if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
+                    //if black/white listed in the buy list make it false
                     send = false;
                 }
             }
@@ -236,6 +256,7 @@ const processCompleted = async (txn, wallet) => {
                 console.log({ sell: channel.blackListedTokens });
                 for (let token of channel.blackListedTokens) {
                     if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
+                        //if black/white listed in the sell(cause it's sell) list make it false
                         send = false;
                     }
                 }
@@ -243,25 +264,51 @@ const processCompleted = async (txn, wallet) => {
                 console.log({ buy: channel.buyBlackListedTokens });
                 for (let token of channel.buyBlackListedTokens) {
                     if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
+                        //same thing as first send= false, bu this is true sell, and the first one is fake buy(means it's listed as buy cause customer wants it to.)
                         send = false;
                     }
                 }
             }
         }
-        console.log({ send });
-        send &&
-            (await bot.telegram.sendMessage(
-                `${channel.channelId}`,
-                // process.env.GROUP_ID,
-                message,
-                {
-                    // reply_to_message_id: foundPending.telegramSentMessageId,
-                    // allow_sending_without_reply: true,
-                    disable_web_page_preview: true,
+        console.log({ send2: send });
+        if (channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST) {
+            //send is false if there is no message in the first place so, u really should'nt send
+            if (message) {
+                //but in case send is false and there is a message it means the token is registered in the list and we know the channel type is whitelist, which means we only send whitelisted tokens and nothing else
+                //which means only if there is message and send is false, then send the mesage
+                if (!send) {
+                    await bot.telegram.sendMessage(
+                        `${channel.channelId}`,
+                        // process.env.GROUP_ID,
+                        message,
+                        {
+                            // reply_to_message_id: foundPending.telegramSentMessageId,
+                            // allow_sending_without_reply: true,
+                            disable_web_page_preview: true,
+                        }
+                    );
                 }
-            ));
+            }
+        } else {
+            if (send) {
+                await bot.telegram.sendMessage(
+                    `${channel.channelId}`,
+                    // process.env.GROUP_ID,
+                    message,
+                    {
+                        // reply_to_message_id: foundPending.telegramSentMessageId,
+                        // allow_sending_without_reply: true,
+                        disable_web_page_preview: true,
+                    }
+                );
+            }
+        }
     }
 };
+/**
+ * gets all wallets with pending tx and checks if transaction is complete,
+ * and if complete it will send it to the appropriate page and deletes the pending tx
+ */
 const intervalFunction = async () => {
     try {
         const wallets = await prisma.account.findMany({
@@ -273,14 +320,17 @@ const intervalFunction = async () => {
                 continue;
             }
             // console.log(wallet.pendingTransactions);
-            const lastTransaction = await getLastTransaction(wallet.account);
+            const pendings = wallet.pendingTransactions.map((elem) =>
+                elem.transactionHash.toLowerCase()
+            );
+            const lastTransaction = await getLastTransaction(
+                wallet.account,
+                pendings[0]
+            );
             if (!lastTransaction) {
                 continue;
             }
             // console.log({ lastTransaction });
-            const pendings = wallet.pendingTransactions.map((elem) =>
-                elem.transactionHash.toLowerCase()
-            );
             const foundIndex = pendings.indexOf(
                 lastTransaction.hash.toLowerCase()
             );
@@ -291,12 +341,12 @@ const intervalFunction = async () => {
 
                 //remove it from pending
                 const foundPending = wallet.pendingTransactions[foundIndex];
-
-                const data = isBlackListed(
-                    lastTransaction.contractAddress?.toLowerCase(),
-                    tokens,
-                    foundPending
+                console.log(
+                    foundPending,
+                    wallet.pendingTransactions,
+                    foundIndex
                 );
+
                 await prisma.account.update({
                     where: { id: wallet.id },
                     data: {
@@ -308,13 +358,9 @@ const intervalFunction = async () => {
                         },
                     },
                 });
-                if (data) {
-                    continue;
-                } else {
-                    console.log(lastTransaction.isError);
-                    if (lastTransaction?.isError === "0") {
-                        await processCompleted(lastTransaction, wallet);
-                    }
+                console.log(lastTransaction.isError);
+                if (lastTransaction?.isError === "0") {
+                    await processCompleted(lastTransaction, wallet);
                 }
             }
         }

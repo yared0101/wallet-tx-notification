@@ -10,13 +10,30 @@ const formatSendWallets = (list) => {
     }
     return sent || "No Wallets registered for listening";
 };
+/**
+ * formats matched tokens from file to be sent to user
+ * @param {string[]} list list of addresses
+ * @returns
+ */
+const formatSendMatchingTokens = (list) => {
+    if (!list.length) {
+        return "No matching addresses found";
+    }
+    let sent = "Matching adresses found:\n";
+    for (let i in list) {
+        token = list[i];
+        sent += `${Number(i) + 1} - <code>${token}</code>\n`;
+    }
+    return sent || "No Wallets registered for listening";
+};
+
 const formatSendTokens = (list) => {
     let sent = "";
     for (let i in list) {
         token = list[i];
         sent += `${Number(i) + 1} - ${token.name} - ${token.contractId}\n\n`;
     }
-    return sent || "No tokens added in blacklist";
+    return sent || "No tokens added in list";
 };
 /**
  *
@@ -43,7 +60,7 @@ const formatSendDetailChannel = (channel) => {
     return `--    CHANNEL ${channel.name.toUpperCase()}
 
 Name:  ${channel.name}
-Username(id):  ${channel.channelId}
+List Type: ${channel.type}
 Minimum Ether:  ${channel.minimumEther || "Not Set"}
     `;
 };
@@ -156,13 +173,22 @@ const formatSendPending = (txn, wallet, url) => {
  * }[]} tokenData
  * @returns
  */
-const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
+const formatSendComplete = (
+    txn,
+    wallet,
+    url,
+    sellValue,
+    tokenData,
+    isApprove
+) => {
     const isSwap = Boolean(txn.input);
     const isSell = !Boolean(parseInt(txn.value));
     const isFromTransfer =
         txn.from.toLowerCase() === wallet.account.toLowerCase();
     let sentMessage = `${
-        isSwap
+        isApprove
+            ? "Approve for Wallet"
+            : isSwap
             ? "Swap for Wallet "
             : isFromTransfer
             ? "Outgoing Transfer from"
@@ -202,11 +228,15 @@ const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
         }
         sentMessage += "\n\n";
     } else {
-        sentMessage += `value ${toDecimalComplete(
-            sellValue || txn.value
-        )} Ether | ${
-            isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
-        }\n\n`;
+        if (isApprove) {
+            //don't do anything
+        } else {
+            sentMessage += `value ${toDecimalComplete(
+                sellValue || txn.value
+            )} Ether | ${
+                isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
+            }\n\n`;
+        }
     }
     sentMessage += `${url}/tx/${txn.hash}`;
 
@@ -219,6 +249,7 @@ const formatSendComplete = (txn, wallet, url, sellValue, tokenData) => {
  * @param {import("@prisma/client").PendingTransactions} pendingData
  */
 const isBlackListed = (contractAddress, tokens, pendingData) => {
+    console.log({ contractAddress, tokens });
     const addressesArray = tokens.map((elem) => elem.contractId.toLowerCase());
     const foundIndex = addressesArray.indexOf(contractAddress);
     if (foundIndex === -1) {
@@ -247,4 +278,5 @@ module.exports = {
     isBlackListed,
     formatSendDetailChannel,
     toDecimalComplete,
+    formatSendMatchingTokens,
 };

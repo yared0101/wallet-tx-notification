@@ -52,19 +52,31 @@ model time {
   sendComplete Boolean @default(true)
 }
 
+enum CHANNEL_BLACK_LIST_TYPE {
+  BLACKLIST
+  WHITELIST
+}
+
 model Channel {
-  id                   Int                  @id @default(autoincrement())
+  id                   Int                     @id @default(autoincrement())
   name                 String
   description          String?
   channelId            String
   wallets              Account[]
-  sendPending          Boolean              @default(true)
-  sendComplete         Boolean              @default(true)
-  sendBuyTx            Boolean              @default(true)
-  sendSellTx           Boolean              @default(true)
-  incomingTransfer     Boolean              @default(true)
-  outGoingTransfer     Boolean              @default(true)
-  blackListedTokens    BlackListContracts[] @relation("sellBlacklist")
-  buyBlackListedTokens BlackListContracts[] @relation("buyBlacklist")
+  sendPending          Boolean                 @default(true)
+  sendComplete         Boolean                 @default(true)
+  sendBuyTx            Boolean                 @default(true)
+  sendSellTx           Boolean                 @default(true)
+  incomingTransfer     Boolean                 @default(true)
+  outGoingTransfer     Boolean                 @default(true)
+  blackListedTokens    BlackListContracts[]    @relation("sellBlacklist")
+  buyBlackListedTokens BlackListContracts[]    @relation("buyBlacklist")
   minimumEther         Float?
+  type                 CHANNEL_BLACK_LIST_TYPE @default(BLACKLIST)
+}
+
+model BlackListTokensForFiles {
+  id         Int    @id @default(autoincrement())
+  contractId String
+  name       String
 }

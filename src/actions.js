@@ -1,3 +1,4 @@
+const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups } = require("../config");
 const { formatSendDetailChannel } = require("../utils");
 
@@ -64,6 +65,14 @@ module.exports = (bot) => {
             }
             if (toggle === "OUTGOING") {
                 updated = { outGoingTransfer: !channel.outGoingTransfer };
+            }
+            if (toggle === "TYPE") {
+                updated = {
+                    type:
+                        channel.type === CHANNEL_BLACK_LIST_TYPE.BLACKLIST
+                            ? CHANNEL_BLACK_LIST_TYPE.WHITELIST
+                            : CHANNEL_BLACK_LIST_TYPE.BLACKLIST,
+                };
             }
             const updatedChannel = await prisma.channel.update({
                 where: { id: channel.id },
