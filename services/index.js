@@ -231,10 +231,26 @@ const processCompleted = async (txn, wallet) => {
         tokenData,
         isApprove
     );
+    if (!message) {
+        console.log("no message constructed", {
+            message,
+            txn,
+            wallet,
+            baseUrl,
+            isSell,
+            extradataVaL: extraData?.value,
+            tokenData,
+            isApprove,
+        });
+        return false;
+    }
     for (let channel of channels) {
         const tokens = tokenData.map((elem) => elem.contractAddress);
         let send = message ? true : false;
         console.log({ send1: send });
+        if (!send) {
+            console.log({ message });
+        }
         let realBuy = false;
         if (tokenData && tokenData.length === 2) {
             if (
@@ -347,20 +363,28 @@ const intervalFunction = async () => {
                     foundIndex
                 );
 
-                await prisma.account.update({
-                    where: { id: wallet.id },
-                    data: {
-                        lastTransactionTimeStamp: lastTransaction.hash,
-                        pendingTransactions: {
-                            delete: {
-                                id: foundPending.id,
+                console.log(lastTransaction.isError);
+                let messageConstructed = true;
+                if (lastTransaction?.isError === "0") {
+                    messageConstructed = await processCompleted(
+                        lastTransaction,
+                        wallet
+                    );
+                }
+                if (messageConstructed === false) {
+                    //message construction failure should skip delete and then retry later cause it's obviously network issues
+                } else {
+                    await prisma.account.update({
+                        where: { id: wallet.id },
+                        data: {
+                            lastTransactionTimeStamp: lastTransaction.hash,
+                            pendingTransactions: {
+                                delete: {
+                                    id: foundPending.id,
+                                },
                             },
                         },
-                    },
-                });
-                console.log(lastTransaction.isError);
-                if (lastTransaction?.isError === "0") {
-                    await processCompleted(lastTransaction, wallet);
+                    });
                 }
             }
         }
