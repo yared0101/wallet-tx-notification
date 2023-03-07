@@ -152,7 +152,7 @@ module.exports = (bot) => {
                             await ctx.reply(
                                 `${fileLength} files sent. you can send more files ${
                                     fileLength > 1
-                                        ? `or press ${displayStrings.fileCompareOptions.displayResults} to process files`
+                                        ? `or press Display Results to process files`
                                         : ""
                                 }`
                             );

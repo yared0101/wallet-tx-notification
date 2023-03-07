@@ -67,14 +67,16 @@ const displayStrings = {
             }`,
     },
     home: "Home",
-    fileCompare: "Find Matching Tokens",
+    fileCompare: "Find Matching Addresses",
     fileCompareOptions: {
         addFile: "Add File",
-        displayResults: "Display Results",
+        displaySellResults: "Find Sell Addresses",
+        displayBuyResults: "Find Buy Addresses",
+        displayBothResults: "Find All Addresses",
         cleanFiles: "Remove All Uploaded",
-        addBlackListToken: "Add Black List Token",
-        removeBlackListToken: "Remove Black list Token",
-        listBlackListToken: "List Black List Tokens",
+        addBlackListToken: "Add Blacklist Address",
+        removeBlackListToken: "Remove Blacklist Address",
+        listBlackListToken: "List Blacklist Addresses",
     },
 };
 const markups = {
@@ -267,10 +269,21 @@ const markups = {
                         text: displayStrings.fileCompareOptions.addFile,
                     },
                     {
-                        text: displayStrings.fileCompareOptions.displayResults,
+                        text: displayStrings.fileCompareOptions.cleanFiles,
+                    },
+                ],
+                [
+                    {
+                        text: displayStrings.fileCompareOptions
+                            .displaySellResults,
                     },
                     {
-                        text: displayStrings.fileCompareOptions.cleanFiles,
+                        text: displayStrings.fileCompareOptions
+                            .displayBuyResults,
+                    },
+                    {
+                        text: displayStrings.fileCompareOptions
+                            .displayBothResults,
                     },
                 ],
                 [

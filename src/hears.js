@@ -467,40 +467,67 @@ module.exports = (bot) => {
             } catch (e) {}
         }
     );
-    bot.hears(displayStrings.fileCompareOptions.displayResults, async (ctx) => {
-        try {
-            if (!session[ctx.chat.id]?.fileCompare) {
-                return await ctx.reply(
-                    `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
-                    markups.homeMarkup
-                );
+    bot.hears(
+        [
+            displayStrings.fileCompareOptions.displaySellResults,
+            displayStrings.fileCompareOptions.displayBuyResults,
+            displayStrings.fileCompareOptions.displayBothResults,
+        ],
+        async (ctx) => {
+            try {
+                if (!session[ctx.chat.id]?.fileCompare) {
+                    return await ctx.reply(
+                        `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
+                        markups.homeMarkup
+                    );
+                }
+                if (!session[ctx.chat.id].fileCompare.files.length) {
+                    return await ctx.reply(
+                        "No file has been added, please add files first"
+                    );
+                }
+                if (session[ctx.chat.id].fileCompare.files.length < 2) {
+                    return await ctx.reply("At least 2 files are necessary");
+                }
+                const files = session[ctx.chat.id].fileCompare.files;
+                await ctx.reply("please wait, it may be a while ...");
+                const fileUrls = await fileUrlsLoader(files, bot);
+                const downloadedFiles = await getFiles(fileUrls);
+                const blackListTokens =
+                    await prisma.blackListTokensForFiles.findMany();
+                //everything calculated with the whitelisting algorithm written in trials.js(dev file only not pushed on repo)
+                let matchingTokens = [];
+                if (
+                    ctx.message.text ===
+                    displayStrings.fileCompareOptions.displaySellResults
+                ) {
+                    matchingTokens = getMatchingSellTokensFromFiles(
+                        downloadedFiles,
+                        blackListTokens.map((elem) => elem.contractId)
+                    );
+                } else if (
+                    ctx.message.text ===
+                    displayStrings.fileCompareOptions.displayBuyResults
+                ) {
+                    matchingTokens = getMatchingBuyTokensFromFiles(
+                        downloadedFiles,
+                        blackListTokens.map((elem) => elem.contractId)
+                    );
+                } else {
+                    matchingTokens = getMatchingBothTokensFromFiles(
+                        downloadedFiles,
+                        blackListTokens.map((elem) => elem.contractId)
+                    );
+                }
+                const matchedFinalText =
+                    formatSendMatchingTokens(matchingTokens);
+                await ctx.reply(matchedFinalText, { parse_mode: "HTML" });
+            } catch (e) {
+                console.log(e);
+                await ctx.reply("something went wrong");
             }
-            if (!session[ctx.chat.id].fileCompare.files.length) {
-                return await ctx.reply(
-                    "No file has been added, please add files first"
-                );
-            }
-            if (session[ctx.chat.id].fileCompare.files.length < 2) {
-                return await ctx.reply("At least 2 files are necessary");
-            }
-            const files = session[ctx.chat.id].fileCompare.files;
-            await ctx.reply("please wait, it may be a while ...");
-            const fileUrls = await fileUrlsLoader(files, bot);
-            const downloadedFiles = await getFiles(fileUrls);
-            const blackListTokens =
-                await prisma.blackListTokensForFiles.findMany();
-            //everything calculated with the whitelisting algorithm written in trials.js(dev file only not pushed on repo)
-            const matchingTokens = getMatchingTokensFromFiles(
-                downloadedFiles,
-                blackListTokens.map((elem) => elem.contractId)
-            );
-            const matchedFinalText = formatSendMatchingTokens(matchingTokens);
-            await ctx.reply(matchedFinalText, { parse_mode: "HTML" });
-        } catch (e) {
-            console.log(e);
-            await ctx.reply("something went wrong");
         }
-    });
+    );
     bot.hears(displayStrings.fileCompareOptions.cleanFiles, async (ctx) => {
         try {
             if (!session[ctx.chat.id]?.fileCompare) {
@@ -609,7 +636,7 @@ const getFiles = async (fileUrls) => {
  * @param {string[]} blackListTokens
  * @returns
  */
-const getMatchingTokensFromFiles = (files, blackListTokens) => {
+const getMatchingSellTokensFromFiles = (files, blackListTokens) => {
     //implementing a whitelist array which adds all the previous added tokens, and if token isn't in white list and white list exists it means
     //this means the last token per file is actually all we need
     let whitelist = [];
@@ -624,20 +651,124 @@ const getMatchingTokensFromFiles = (files, blackListTokens) => {
         for (let line of lines) {
             //split with comma to find the token in its own value in the 4th index
             const token = line.split(",")[4]?.replace(/"/g, "");
-            if (!token) {
-                continue;
-            }
-            //don't register blacklist items and already added items
-            if (
-                !blackListTokens.includes(token) &&
-                !tokensPerFile.includes(token)
-            ) {
-                if (i == 0) {
-                    //pass here if it's first time around and 1st whitelist isn't constructed
-                    tokensPerFile.push(token);
-                } else {
-                    if (whitelist.includes(token)) {
+            if (token) {
+                //don't register blacklist items and already added items
+                if (
+                    !blackListTokens.includes(token) &&
+                    !tokensPerFile.includes(token)
+                ) {
+                    if (i == 0) {
+                        //pass here if it's first time around and 1st whitelist isn't constructed
                         tokensPerFile.push(token);
+                    } else {
+                        if (whitelist.includes(token)) {
+                            tokensPerFile.push(token);
+                        }
+                    }
+                }
+            }
+        }
+        whitelist = tokensPerFile;
+        //push all the files token into all tokens array of arrrays
+    }
+    return whitelist;
+};
+
+/**
+ *
+ * @param {string[]} files
+ * @param {string[]} blackListTokens
+ * @returns
+ */
+const getMatchingBuyTokensFromFiles = (files, blackListTokens) => {
+    //implementing a whitelist array which adds all the previous added tokens, and if token isn't in white list and white list exists it means
+    //this means the last token per file is actually all we need
+    let whitelist = [];
+    for (let i in files) {
+        const file = files[i];
+        //split file into lines
+        let lines = file.split("\n");
+        //removes title line
+        lines.shift();
+        let tokensPerFile = [];
+        //get token from each line and push inot tokens per line
+        for (let line of lines) {
+            //split with comma to find the token in its own value in the 4th index
+            const token = line.split(",")[5]?.replace(/"/g, "");
+            if (token) {
+                //don't register blacklist items and already added items
+                if (
+                    !blackListTokens.includes(token) &&
+                    !tokensPerFile.includes(token)
+                ) {
+                    if (i == 0) {
+                        //pass here if it's first time around and 1st whitelist isn't constructed
+                        tokensPerFile.push(token);
+                    } else {
+                        if (whitelist.includes(token)) {
+                            tokensPerFile.push(token);
+                        }
+                    }
+                }
+            }
+        }
+        whitelist = tokensPerFile;
+        //push all the files token into all tokens array of arrrays
+    }
+    return whitelist;
+};
+
+/**
+ *
+ * @param {string[]} files
+ * @param {string[]} blackListTokens
+ * @returns
+ */
+const getMatchingBothTokensFromFiles = (files, blackListTokens) => {
+    //implementing a whitelist array which adds all the previous added tokens, and if token isn't in white list and white list exists it means
+    //this means the last token per file is actually all we need
+    let whitelist = [];
+    for (let i in files) {
+        const file = files[i];
+        //split file into lines
+        let lines = file.split("\n");
+        //removes title line
+        lines.shift();
+        let tokensPerFile = [];
+        //get token from each line and push inot tokens per line
+        for (let line of lines) {
+            //split with comma to find the token in its own value in the 4th index
+            const token = line.split(",")[4]?.replace(/"/g, "");
+            if (token) {
+                //don't register blacklist items and already added items
+                if (
+                    !blackListTokens.includes(token) &&
+                    !tokensPerFile.includes(token)
+                ) {
+                    if (i == 0) {
+                        //pass here if it's first time around and 1st whitelist isn't constructed
+                        tokensPerFile.push(token);
+                    } else {
+                        if (whitelist.includes(token)) {
+                            tokensPerFile.push(token);
+                        }
+                    }
+                }
+            }
+            const token2 = line.split(",")[5]?.replace(/"/g, "");
+            if (token2) {
+                //don't register blacklist items and already added items
+                if (
+                    !blackListTokens.includes(token2) &&
+                    !tokensPerFile.includes(token2)
+                ) {
+                    if (i == 0) {
+                        //pass here if it's first time around and 1st whitelist isn't constructed
+                        tokensPerFile.push(token2);
+                    } else {
+                        if (whitelist.includes(token2)) {
+                            tokensPerFile.push(token2);
+                        }
                     }
                 }
             }
