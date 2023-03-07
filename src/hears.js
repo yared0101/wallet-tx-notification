@@ -519,8 +519,18 @@ module.exports = (bot) => {
                         blackListTokens.map((elem) => elem.contractId)
                     );
                 }
-                const matchedFinalText =
-                    formatSendMatchingTokens(matchingTokens);
+                const foundWallets = await prisma.account.findMany({
+                    where: {
+                        account: {
+                            in: matchingTokens,
+                            mode: "insensitive",
+                        },
+                    },
+                });
+                const matchedFinalText = formatSendMatchingTokens(
+                    matchingTokens,
+                    foundWallets
+                );
                 await ctx.reply(matchedFinalText, { parse_mode: "HTML" });
             } catch (e) {
                 console.log(e);

@@ -13,16 +13,22 @@ const formatSendWallets = (list) => {
 /**
  * formats matched tokens from file to be sent to user
  * @param {string[]} list list of addresses
+ * @param {import('@prisma/client').Account[]} matchingAccounts list of addresses
  * @returns
  */
-const formatSendMatchingTokens = (list) => {
+const formatSendMatchingTokens = (list, matchingAccounts) => {
     if (!list.length) {
         return "No matching addresses found";
     }
     let sent = "Matching adresses found:\n";
     for (let i in list) {
         token = list[i];
-        sent += `${Number(i) + 1} - <code>${token}</code>\n`;
+        const matched = matchingAccounts.find(
+            (elem) => elem.account.toLowerCase() === token
+        );
+        sent += `${Number(i) + 1} - ${
+            matched ? matched.nameTag : `<code>${token}</code>`
+        }\n`;
     }
     return sent || "No Wallets registered for listening";
 };
