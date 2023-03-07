@@ -187,8 +187,11 @@ const processCompleted = async (txn, wallet) => {
                 : { incomingTransfer: true };
     }
     const extraData =
-        isSwap && (await getInternalTransaction(txn.hash, wallet.account));
+        isSell && (await getInternalTransaction(txn.hash, wallet.account));
     let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
+    if (isApprove) {
+        filter = { ...filter, sendApprove: true };
+    }
     filter = {
         ...filter,
         OR: [
@@ -222,7 +225,15 @@ const processCompleted = async (txn, wallet) => {
     });
     const tokenData = isSwap
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
-        : [];
+        : undefined;
+    if (isSwap && !tokenData) {
+        console.log("swap tx not getting token data", txn.hash, tokenData);
+        return false;
+    }
+    if (isSell && !isApprove && !extraData) {
+        console.log("sell tx not getting internal tx", txn.hash, extraData);
+        return false;
+    }
     const message = formatSendComplete(
         txn,
         wallet,
@@ -330,7 +341,6 @@ const intervalFunction = async () => {
         const wallets = await prisma.account.findMany({
             include: { pendingTransactions: true },
         });
-        const tokens = await prisma.blackListContracts.findMany();
         for (let wallet of wallets) {
             if (!wallet.pendingTransactions.length) {
                 continue;
@@ -373,16 +383,25 @@ const intervalFunction = async () => {
                 }
                 if (messageConstructed === false) {
                     //message construction failure should skip delete and then retry later cause it's obviously network issues
+                    console.log(
+                        "message not constructed",
+                        lastTransaction.hash
+                    );
                 } else {
-                    await prisma.account.update({
-                        where: { id: wallet.id },
-                        data: {
-                            lastTransactionTimeStamp: lastTransaction.hash,
-                            pendingTransactions: {
-                                delete: {
-                                    id: foundPending.id,
-                                },
-                            },
+                    // await prisma.account.update({
+                    //     where: { id: wallet.id },
+                    //     data: {
+                    //         lastTransactionTimeStamp: lastTransaction.hash,
+                    //         pendingTransactions: {
+                    //             delete: {
+                    //                 id: foundPending.id,
+                    //             },
+                    //         },
+                    //     },
+                    // });
+                    await prisma.pendingTransactions.deleteMany({
+                        where: {
+                            transactionHash: lastTransaction.hash,
                         },
                     });
                 }

@@ -58,15 +58,19 @@ enum CHANNEL_BLACK_LIST_TYPE {
 }
 
 model Channel {
-  id                   Int                     @id @default(autoincrement())
-  name                 String
-  description          String?
-  channelId            String
-  wallets              Account[]
-  sendPending          Boolean                 @default(true)
-  sendComplete         Boolean                 @default(true)
-  sendBuyTx            Boolean                 @default(true)
-  sendSellTx           Boolean                 @default(true)
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  channelId    String
+  wallets      Account[]
+  sendPending  Boolean   @default(true)
+  sendComplete Boolean   @default(true)
+  //these three buy, sell, and approve are versions of complete transaction.(all three off means turning on complete is useless)
+  //if complete turned of, there is no way to get the next three even if they're true.
+  sendBuyTx    Boolean   @default(true)
+  sendSellTx   Boolean   @default(true)
+  sendApprove  Boolean   @default(true)
+
   incomingTransfer     Boolean                 @default(true)
   outGoingTransfer     Boolean                 @default(true)
   blackListedTokens    BlackListContracts[]    @relation("sellBlacklist")

@@ -70,26 +70,17 @@ const erc20TokenTransferEvents = async (address, hash) => {
  */
 const getInternalTransaction = async (transaction, targetAcc) => {
     // return undefined;
-    let try3Times = 0;
-    while (try3Times < 3) {
-        try3Times += 1;
-        try {
-            const data = await axios.get(
-                `${url}/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`
-            );
-            let returnable = data.data.result.find(
-                (elem) => elem.to.toLowerCase() === targetAcc.toLowerCase()
-            );
-            if (returnable && returnable.value) {
-                return returnable;
-            } else {
-                console.log({ try3Times, returnable });
-                continue;
-            }
-        } catch (e) {
-            console.log("internal out", e);
-            return undefined;
-        }
+    try {
+        const data = await axios.get(
+            `${url}/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`
+        );
+        let returnable = data.data.result.find(
+            (elem) => elem.to.toLowerCase() === targetAcc.toLowerCase()
+        );
+        return returnable;
+    } catch (e) {
+        console.log("internal out", e);
+        return undefined;
     }
 };
 const subscribe = async (processPending) => {

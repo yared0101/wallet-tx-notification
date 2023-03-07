@@ -139,8 +139,8 @@ module.exports = (bot) => {
             }
         } else {
             //when document is sent
-            console.log(ctx.message.document);
-            if (ctx.message.document) {
+            console.log(ctx?.message?.document);
+            if (ctx?.message?.document) {
                 if (session[ctx.chat.id]?.fileCompare) {
                     if (session[ctx.chat.id]?.fileCompare?.addFile) {
                         if (ctx.message.document.mime_type === "text/csv") {

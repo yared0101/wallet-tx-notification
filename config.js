@@ -54,8 +54,9 @@ const displayStrings = {
     channelConfigs: {
         sendPending: (status) => beauty(`Send Pending`, status),
         sendComplete: (status) => beauty(`Send Complete`, status),
-        sendSellTx: (status) => beauty(`Send Sell Txns`, status),
-        sendBuyTx: (status) => beauty(`Send Buy Txns`, status),
+        sendSellTx: (status) => beauty(`Send Sell Tx`, status),
+        sendBuyTx: (status) => beauty(`Send Buy Tx`, status),
+        sendApprove: (status) => beauty(`Send Approve`, status),
         sendIncoming: (status) => beauty(`Send Incoming Tfers`, status),
         sendOutgoing: (status) => beauty(`Send Outgoing Tfers`, status),
         channelType: (type) =>
@@ -192,6 +193,7 @@ const markups = {
         sendComplete,
         sendBuyTx,
         sendSellTx,
+        sendApprove,
         incomingTransfer,
         outGoingTransfer,
         type,
@@ -224,6 +226,12 @@ const markups = {
                             sendSellTx
                         ),
                         callback_data: "config_SELL",
+                    },
+                    {
+                        text: displayStrings.channelConfigs.sendApprove(
+                            sendApprove
+                        ),
+                        callback_data: "config_APPROVE",
                     },
                 ],
                 [
@@ -292,7 +300,7 @@ const markups = {
 const session = {};
 
 const minTime = 2;
-const defaultTime = 5;
+const defaultTime = 10;
 // const url = process.env.GOERLI_NET_URL;
 // const baseUrl = process.env.GOERLI_BASE_NET_URL;
 // const address = "0x628254F7513e02865AD6cD4A407dea5B5Da55012";

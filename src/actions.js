@@ -60,6 +60,9 @@ module.exports = (bot) => {
             if (toggle === "SELL") {
                 updated = { sendSellTx: !channel.sendSellTx };
             }
+            if (toggle === "APPROVE") {
+                updated = { sendApprove: !channel.sendApprove };
+            }
             if (toggle === "INCOMING") {
                 updated = { incomingTransfer: !channel.incomingTransfer };
             }

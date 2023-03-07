@@ -496,11 +496,6 @@ module.exports = (bot) => {
             );
             const matchedFinalText = formatSendMatchingTokens(matchingTokens);
             await ctx.reply(matchedFinalText, { parse_mode: "HTML" });
-            await ctx.reply(
-                `you have sent ${
-                    session[ctx.chat.id]?.fileCompare.files.length
-                } files successfully`
-            );
         } catch (e) {
             console.log(e);
             await ctx.reply("something went wrong");
