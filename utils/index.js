@@ -27,7 +27,9 @@ const formatSendMatchingTokens = (list, matchingAccounts) => {
             (elem) => elem.account.toLowerCase() === token
         );
         sent += `${Number(i) + 1} - ${
-            matched ? matched.nameTag : `<code>${token}</code>`
+            matched
+                ? `${matched.nameTag} - <code>${token}</code>`
+                : `<code>${token}</code>`
         }\n`;
     }
     return sent || "No Wallets registered for listening";
