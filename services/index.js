@@ -256,7 +256,7 @@ const processCompleted = async (txn, wallet) => {
         return false;
     }
     for (let channel of channels) {
-        const tokens = tokenData.map((elem) => elem.contractAddress);
+        const tokens = tokenData?.map((elem) => elem.contractAddress) || [];
         let send = message ? true : false;
         console.log({ send1: send });
         if (!send) {
