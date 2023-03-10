@@ -227,11 +227,19 @@ const processCompleted = async (txn, wallet) => {
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
         : undefined;
     if (isSwap && !tokenData) {
-        console.log("swap tx not getting token data", txn.hash, tokenData);
+        logger.info({
+            errorMessage: "swap tx not getting token data",
+            txn,
+            tokenData,
+        });
         return false;
     }
     if (isSell && !isApprove && !extraData) {
-        console.log("sell tx not getting internal tx", txn.hash, extraData);
+        logger.info({
+            errorMessage: "sell tx not getting internal tx",
+            txn,
+            extraData,
+        });
         return false;
     }
     const message = formatSendComplete(
@@ -243,7 +251,8 @@ const processCompleted = async (txn, wallet) => {
         isApprove
     );
     if (!message) {
-        console.log("no message constructed", {
+        logger.info({
+            errorMessage: "no message constructed",
             message,
             txn,
             wallet,
@@ -382,6 +391,10 @@ const intervalFunction = async () => {
                     );
                 }
                 if (messageConstructed === false) {
+                    logger.info({
+                        errorMessage: "message not constructed",
+                        lastTransaction: lastTransaction.hash,
+                    });
                     //message construction failure should skip delete and then retry later cause it's obviously network issues
                     console.log(
                         "message not constructed",
@@ -399,6 +412,11 @@ const intervalFunction = async () => {
                     //         },
                     //     },
                     // });
+                    logger.info({
+                        hash: lastTransaction.hash,
+                        success: true,
+                        deleted: true,
+                    });
                     await prisma.pendingTransactions.deleteMany({
                         where: {
                             transactionHash: lastTransaction.hash,
