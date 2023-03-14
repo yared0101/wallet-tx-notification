@@ -54,6 +54,7 @@ const processPending = async (txn) => {
         txn.input = "";
     }
     const isSell = !Boolean(parseInt(txn.value));
+
     const filter = isSwap
         ? isSell
             ? { sendSellTx: true }
@@ -172,7 +173,6 @@ const processCompleted = async (txn, wallet) => {
         txn,
         wallet,
     });
-    const isSell = !Boolean(parseInt(txn.value));
     const isSwap = !(txn.input === "" || txn.input === "0x");
     const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
@@ -186,8 +186,65 @@ const processCompleted = async (txn, wallet) => {
                 ? { outGoingTransfer: true }
                 : { incomingTransfer: true };
     }
+
+    const tokenData = isSwap
+        ? await erc20TokenTransferEvents(wallet.account, txn.hash)
+        : undefined;
+
+    if (isSwap && (!tokenData || !tokenData.length)) {
+        logger.info({
+            errorMessage: "swap tx not getting token data",
+            txn,
+            tokenData,
+        });
+        return false;
+    }
+    let isSell = true;
+
+    //if it's not swap it's not sell
+    if (!isSwap) isSell = false;
+    //if there is ether value then it's not sell
+    else if (Boolean(parseInt(txn.value))) isSell = false;
+    //now check for swap data and based on this logic ===>
+    //if the first token in Transaction Action is ETH(eth would have value then) or a stablecoin it is a buy transaction. If it is any other token, it is a sell tranaction.
+    else if (tokenData && tokenData.length === 2) {
+        if (buyTokens.find((elem) => elem === tokenData[0].contractAddress)) {
+            isSell = false;
+        }
+    }
+
     const extraData =
         isSell && (await getInternalTransaction(txn.hash, wallet.account));
+    if (isSell && !isApprove && !extraData) {
+        logger.info({
+            errorMessage: "sell tx not getting internal tx",
+            txn,
+            extraData,
+        });
+        return false;
+    }
+    const message = formatSendComplete(
+        txn,
+        wallet,
+        baseUrl,
+        isSell && extraData?.value,
+        tokenData,
+        isApprove
+    );
+    if (!message) {
+        logger.info({
+            errorMessage: "no message constructed",
+            message,
+            txn,
+            wallet,
+            baseUrl,
+            isSell,
+            extradataVaL: extraData?.value,
+            tokenData,
+            isApprove,
+        });
+        return false;
+    }
     let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
     if (isApprove) {
         filter = { ...filter, sendApprove: true };
@@ -223,47 +280,6 @@ const processCompleted = async (txn, wallet) => {
             buyBlackListedTokens: true,
         },
     });
-    const tokenData = isSwap
-        ? await erc20TokenTransferEvents(wallet.account, txn.hash)
-        : undefined;
-    if (isSwap && !tokenData) {
-        logger.info({
-            errorMessage: "swap tx not getting token data",
-            txn,
-            tokenData,
-        });
-        return false;
-    }
-    if (isSell && !isApprove && !extraData) {
-        logger.info({
-            errorMessage: "sell tx not getting internal tx",
-            txn,
-            extraData,
-        });
-        return false;
-    }
-    const message = formatSendComplete(
-        txn,
-        wallet,
-        baseUrl,
-        isSell && extraData?.value,
-        tokenData,
-        isApprove
-    );
-    if (!message) {
-        logger.info({
-            errorMessage: "no message constructed",
-            message,
-            txn,
-            wallet,
-            baseUrl,
-            isSell,
-            extradataVaL: extraData?.value,
-            tokenData,
-            isApprove,
-        });
-        return false;
-    }
     for (let channel of channels) {
         const tokens = tokenData?.map((elem) => elem.contractAddress) || [];
         let send = message ? true : false;
@@ -271,41 +287,25 @@ const processCompleted = async (txn, wallet) => {
         if (!send) {
             console.log({ message });
         }
-        let realBuy = false;
-        if (tokenData && tokenData.length === 2) {
-            if (
-                buyTokens.find((elem) => elem === tokenData[0].contractAddress)
-            ) {
-                realBuy = true;
-            }
-        }
-        if (realBuy) {
-            console.log({ buy: channel.buyBlackListedTokens });
-            for (let token of channel.buyBlackListedTokens) {
+
+        if (isSell) {
+            console.log({ sell: channel.blackListedTokens });
+            for (let token of channel.blackListedTokens) {
                 if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
-                    //if black/white listed in the buy list make it false
+                    //if black/white listed in the sell(cause it's sell) list make it false
                     send = false;
                 }
             }
         } else {
-            if (isSell) {
-                console.log({ sell: channel.blackListedTokens });
-                for (let token of channel.blackListedTokens) {
-                    if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
-                        //if black/white listed in the sell(cause it's sell) list make it false
-                        send = false;
-                    }
-                }
-            } else {
-                console.log({ buy: channel.buyBlackListedTokens });
-                for (let token of channel.buyBlackListedTokens) {
-                    if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
-                        //same thing as first send= false, bu this is true sell, and the first one is fake buy(means it's listed as buy cause customer wants it to.)
-                        send = false;
-                    }
+            console.log({ buy: channel.buyBlackListedTokens });
+            for (let token of channel.buyBlackListedTokens) {
+                if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
+                    //same thing as first send= false, bu this is true sell, and the first one is fake buy(means it's listed as buy cause customer wants it to.)
+                    send = false;
                 }
             }
         }
+
         console.log({ send2: send });
         if (channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST) {
             //send is false if there is no message in the first place so, u really should'nt send
