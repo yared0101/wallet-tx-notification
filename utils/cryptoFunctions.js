@@ -44,7 +44,7 @@ const getLastTransaction = async (address, transactionHash) => {
 const erc20TokenTransferEvents = async (address, hash) => {
     try {
         const data = await axios.get(
-            `${url}/api?module=account&action=tokentx&address=${address}&page=1&offset=100&startblock=0&endblock=27025780&sort=desc&apikey=${apiKey}`
+            `${url}/api?module=account&action=tokentx&address=${address}&page=1&offset=0&startblock=0&endblock=27025780&sort=desc&apikey=${apiKey}`
         );
         const transferredToken = data.data.result.filter(
             (elem) => elem.hash.toLowerCase() === hash.toLowerCase()

@@ -170,10 +170,10 @@ const processCompleted = async (txn, wallet) => {
         type: "COMPLETE",
         trace: "/services/index.js - line number 171",
         txn,
-        wallet,
     });
     const isSell = !Boolean(parseInt(txn.value));
     const isSwap = !(txn.input === "" || txn.input === "0x");
+    console.log({ isSwap, input: txn.input });
     const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
         txn.input = "";
@@ -226,6 +226,7 @@ const processCompleted = async (txn, wallet) => {
     const tokenData = isSwap
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
         : undefined;
+    console.log(tokenData);
     if (isSwap && !tokenData) {
         logger.info({
             errorMessage: "swap tx not getting token data",
@@ -234,14 +235,14 @@ const processCompleted = async (txn, wallet) => {
         });
         return false;
     }
-    if (isSell && !isApprove && !extraData) {
-        logger.info({
-            errorMessage: "sell tx not getting internal tx",
-            txn,
-            extraData,
-        });
-        return false;
-    }
+    // if (isSell && !isApprove && !extraData) {
+    //     logger.info({
+    //         errorMessage: "sell tx not getting internal tx",
+    //         txn,
+    //         extraData,
+    //     });
+    //     return false;
+    // }
     const message = formatSendComplete(
         txn,
         wallet,
@@ -251,7 +252,7 @@ const processCompleted = async (txn, wallet) => {
         isApprove
     );
     if (!message) {
-        logger.info({
+        console.log({
             errorMessage: "no message constructed",
             message,
             txn,
@@ -280,7 +281,7 @@ const processCompleted = async (txn, wallet) => {
             }
         }
         if (realBuy) {
-            console.log({ buy: channel.buyBlackListedTokens });
+            // console.log({ buy: channel.buyBlackListedTokens });
             for (let token of channel.buyBlackListedTokens) {
                 if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
                     //if black/white listed in the buy list make it false
@@ -289,7 +290,7 @@ const processCompleted = async (txn, wallet) => {
             }
         } else {
             if (isSell) {
-                console.log({ sell: channel.blackListedTokens });
+                // console.log({ sell: channel.blackListedTokens });
                 for (let token of channel.blackListedTokens) {
                     if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
                         //if black/white listed in the sell(cause it's sell) list make it false
@@ -297,7 +298,7 @@ const processCompleted = async (txn, wallet) => {
                     }
                 }
             } else {
-                console.log({ buy: channel.buyBlackListedTokens });
+                // console.log({ buy: channel.buyBlackListedTokens });
                 for (let token of channel.buyBlackListedTokens) {
                     if (tokens.indexOf(token.contractId.toLowerCase()) !== -1) {
                         //same thing as first send= false, bu this is true sell, and the first one is fake buy(means it's listed as buy cause customer wants it to.)
@@ -348,7 +349,11 @@ const processCompleted = async (txn, wallet) => {
 const intervalFunction = async () => {
     try {
         const wallets = await prisma.account.findMany({
-            include: { pendingTransactions: true },
+            include: {
+                pendingTransactions: {
+                    orderBy: { telegramSentMessageId: "asc" },
+                },
+            },
         });
         for (let wallet of wallets) {
             if (!wallet.pendingTransactions.length) {
@@ -358,17 +363,42 @@ const intervalFunction = async () => {
             const pendings = wallet.pendingTransactions.map((elem) =>
                 elem.transactionHash.toLowerCase()
             );
+            // for (let i in pendings) {
             const lastTransaction = await getLastTransaction(
                 wallet.account,
                 pendings[0]
             );
             if (!lastTransaction) {
+                if (wallet.pendingTransactions[0].telegramSentMessageId < 10) {
+                    await prisma.pendingTransactions.update({
+                        where: {
+                            transactionHash_accountId: {
+                                transactionHash: pendings[0],
+                                accountId: wallet.id,
+                            },
+                        },
+                        data: {
+                            telegramSentMessageId: {
+                                increment: 1,
+                            },
+                        },
+                    });
+                } else {
+                    await prisma.pendingTransactions.deleteMany({
+                        where: {
+                            transactionHash: pendings[0],
+                        },
+                    });
+                    logger.info({
+                        message: "Give up on pending",
+                        hash: pendings[0],
+                    });
+                }
+                console.log("no data found for", pendings[0]);
                 continue;
             }
             // console.log({ lastTransaction });
-            const foundIndex = pendings.indexOf(
-                lastTransaction.hash.toLowerCase()
-            );
+            const foundIndex = 0;
             if (foundIndex === -1) {
                 //means no pending
             } else {
@@ -376,13 +406,9 @@ const intervalFunction = async () => {
 
                 //remove it from pending
                 const foundPending = wallet.pendingTransactions[foundIndex];
-                console.log(
-                    foundPending,
-                    wallet.pendingTransactions,
-                    foundIndex
-                );
+                console.log(foundPending, foundIndex);
 
-                console.log(lastTransaction.isError);
+                console.log("error", lastTransaction.isError);
                 let messageConstructed = true;
                 if (lastTransaction?.isError === "0") {
                     messageConstructed = await processCompleted(
@@ -424,6 +450,8 @@ const intervalFunction = async () => {
                     });
                 }
             }
+            // break;
+            // }
         }
     } catch (e) {
         console.log("set - interval", e);

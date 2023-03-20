@@ -215,6 +215,18 @@ const formatSendComplete = (
             sentMessage += ` ${realval(tokenData[0])} ${
                 tokenData[0].tokenSymbol
             } for ${realval(tokenData[1])} ${tokenData[1].tokenSymbol}`;
+        } else if (tokenData.length === 1 && isSell && !sellValue) {
+            const isFromTransfer2 =
+                tokenData[0].from.toLowerCase() ===
+                wallet.account.toLowerCase();
+            sentMessage = `${
+                isFromTransfer2
+                    ? "Outgoing Token Transfer from"
+                    : "Incoming Token Transfer to"
+            } ${wallet.nameTag} (Completed):\n\n`;
+            sentMessage += `value ${realval(tokenData[0])} ${
+                tokenData[0].tokenSymbol
+            } | ${"Transfer 🟡"}`;
         } else {
             sentMessage += `value ${toDecimalComplete(
                 sellValue || txn.value

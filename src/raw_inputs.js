@@ -236,7 +236,7 @@ const addWallet = async (ctx, text) => {
                 where: { account },
             });
             if (prev) {
-                ctx.reply("wallet already exists");
+                ctx.reply(`wallet ${prev.nameTag} already exists`);
                 return;
             }
             const data = await getLastTransaction(account);
