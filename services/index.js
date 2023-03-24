@@ -227,9 +227,10 @@ const processCompleted = async (txn, wallet) => {
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
         : undefined;
     console.log(tokenData);
-    if (isSwap && !tokenData) {
+    const hasTokenData = tokenData ? (tokenData.length ? true : false) : false;
+    if (isSwap && !isSell && !hasTokenData) {
         logger.info({
-            errorMessage: "swap tx not getting token data",
+            errorMessage: "swap buy tx not getting token data",
             txn,
             tokenData,
         });
