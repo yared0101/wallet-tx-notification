@@ -173,12 +173,11 @@ const processCompleted = async (txn, wallet) => {
     });
     const isSell = !Boolean(parseInt(txn.value));
     const isSwap = !(txn.input === "" || txn.input === "0x");
-    console.log({ isSwap, input: txn.input });
     const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
         txn.input = "";
     }
-    console.log({ input: txn.input });
+    console.log({ input10: txn.input?.substring(0, 10) });
     let transferFilter = {};
     if (!isSwap) {
         transferFilter =
@@ -361,20 +360,21 @@ const intervalFunction = async () => {
                 continue;
             }
             // console.log(wallet.pendingTransactions);
-            const pendings = wallet.pendingTransactions.map((elem) =>
-                elem.transactionHash.toLowerCase()
-            );
+            const firstPendingTransaciton = wallet.pendingTransactions[0];
+            const pendingsZero =
+                firstPendingTransaciton.transactionHash.toLowerCase();
+
             // for (let i in pendings) {
             const lastTransaction = await getLastTransaction(
                 wallet.account,
-                pendings[0]
+                pendingsZero
             );
             if (!lastTransaction) {
                 if (wallet.pendingTransactions[0].telegramSentMessageId < 10) {
                     await prisma.pendingTransactions.update({
                         where: {
                             transactionHash_accountId: {
-                                transactionHash: pendings[0],
+                                transactionHash: pendingsZero,
                                 accountId: wallet.id,
                             },
                         },
@@ -387,70 +387,85 @@ const intervalFunction = async () => {
                 } else {
                     await prisma.pendingTransactions.deleteMany({
                         where: {
-                            transactionHash: pendings[0],
+                            transactionHash: pendingsZero,
                         },
                     });
                     logger.info({
                         message: "Give up on pending",
-                        hash: pendings[0],
+                        hash: pendingsZero,
                     });
                 }
-                console.log("no data found for", pendings[0]);
+                console.log("no data found for", pendingsZero);
                 continue;
             }
             // console.log({ lastTransaction });
-            const foundIndex = 0;
-            if (foundIndex === -1) {
-                //means no pending
-            } else {
-                // if not in blacklist send completed tx, if it is then edit the text as blacklisted token
 
-                //remove it from pending
-                const foundPending = wallet.pendingTransactions[foundIndex];
-                console.log(foundPending, foundIndex);
-
-                console.log("error", lastTransaction.isError);
-                let messageConstructed = true;
-                if (lastTransaction?.isError === "0") {
-                    messageConstructed = await processCompleted(
-                        lastTransaction,
-                        wallet
-                    );
-                }
-                if (messageConstructed === false) {
-                    logger.info({
-                        errorMessage: "message not constructed",
-                        lastTransaction: lastTransaction.hash,
-                    });
-                    //message construction failure should skip delete and then retry later cause it's obviously network issues
-                    console.log(
-                        "message not constructed",
-                        lastTransaction.hash
-                    );
-                } else {
-                    // await prisma.account.update({
-                    //     where: { id: wallet.id },
-                    //     data: {
-                    //         lastTransactionTimeStamp: lastTransaction.hash,
-                    //         pendingTransactions: {
-                    //             delete: {
-                    //                 id: foundPending.id,
-                    //             },
-                    //         },
-                    //     },
-                    // });
-                    logger.info({
-                        hash: lastTransaction.hash,
-                        success: true,
-                        deleted: true,
-                    });
-                    await prisma.pendingTransactions.deleteMany({
+            //remove it from pending
+            //increment the processing value by one and if it was 0,10,20,30 then continue, if not don't!
+            console.log("error", lastTransaction.isError);
+            try {
+                const incrementedProcessingValue =
+                    await prisma.pendingTransactions.update({
                         where: {
-                            transactionHash: lastTransaction.hash,
+                            id: firstPendingTransaciton.id,
+                        },
+                        data: {
+                            processing: {
+                                increment: 1,
+                            },
                         },
                     });
+                console.log({
+                    incrementedProcessingValue:
+                        incrementedProcessingValue.processing,
+                });
+                if (incrementedProcessingValue.processing % 10 !== 1) {
+                    return console.log(
+                        "stopped processing cause processing now is",
+                        incrementedProcessingValue.processing
+                    );
                 }
+            } catch (e) {
+                return console.log(
+                    "stopped processing cause processing now has failed(message already sent so it's already deleted)"
+                );
             }
+            let messageConstructed = true;
+            if (lastTransaction?.isError === "0") {
+                messageConstructed = await processCompleted(
+                    lastTransaction,
+                    wallet
+                );
+            }
+            //if message not constructed set the value to 0 cause next interval should reprocess, if constructed it's deleted so no worries
+            if (messageConstructed === false) {
+                await prisma.pendingTransactions.update({
+                    where: {
+                        id: firstPendingTransaciton.id,
+                    },
+                    data: {
+                        processing: 0,
+                    },
+                });
+                logger.info({
+                    errorMessage: "message not constructed",
+                    lastTransaction: lastTransaction.hash,
+                });
+                //message construction failure should skip delete and then retry later cause it's obviously network issues
+                console.log("message not constructed", lastTransaction.hash);
+            } else {
+                logger.info({
+                    hash: lastTransaction.hash,
+                    success: true,
+                    deleted: true,
+                });
+                await prisma.pendingTransactions.deleteMany({
+                    where: {
+                        transactionHash: lastTransaction.hash,
+                    },
+                });
+            }
+
             // break;
             // }
         }

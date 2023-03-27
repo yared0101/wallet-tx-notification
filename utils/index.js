@@ -201,7 +201,7 @@ const formatSendComplete = (
             : isFromTransfer
             ? "Outgoing Transfer from"
             : "Incoming Transfer to"
-    } ${wallet.nameTag} (Completed):\n\n`;
+    } ${wallet.nameTag} (Completed):\n`;
     if (tokenData?.length) {
         if (tokenData.length === 2) {
             if (
@@ -223,7 +223,7 @@ const formatSendComplete = (
                 isFromTransfer2
                     ? "Outgoing Token Transfer from"
                     : "Incoming Token Transfer to"
-            } ${wallet.nameTag} (Completed):\n\n`;
+            } ${wallet.nameTag} (Completed):\n`;
             sentMessage += `value ${realval(tokenData[0])} ${
                 tokenData[0].tokenSymbol
             } | ${"Transfer 🟡"}`;
@@ -232,7 +232,7 @@ const formatSendComplete = (
                 sellValue || txn.value
             )} Ether | ${
                 isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
-            }\n\n`;
+            }\n`;
             tokenData = tokenData[0];
             const etherVal = Number(toDecimalComplete(sellValue || txn.value));
             if (!etherVal) return false;
@@ -246,7 +246,7 @@ const formatSendComplete = (
                 )} ${tokenData.tokenSymbol}`;
             }
         }
-        sentMessage += "\n\n";
+        sentMessage += "\n";
     } else {
         if (isApprove) {
             //don't do anything
@@ -255,7 +255,7 @@ const formatSendComplete = (
                 sellValue || txn.value
             )} Ether | ${
                 isSwap ? (isSell ? "Sell 🔴" : "Buy 🟢") : "Transfer 🟡"
-            }\n\n`;
+            }\n`;
         }
     }
     sentMessage += `${url}/tx/${txn.hash}`;

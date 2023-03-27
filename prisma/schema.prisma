@@ -26,6 +26,7 @@ model PendingTransactions {
   transactionHash       String
   telegramSentMessageId Int
   accountId             Int
+  processing            Int @default(0)
 
   @@unique([transactionHash, accountId])
 }

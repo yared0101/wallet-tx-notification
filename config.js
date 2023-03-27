@@ -11,13 +11,17 @@ const { LogtailTransport } = require("@logtail/winston");
 const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN);
 const { combine, timestamp, json } = winston.format;
 
-var path = require("path");
-var scriptName = path.basename(__filename);
+// var path = require("path");
+// var scriptName = path.basename(__filename);
 // console.log(scriptName);
 // console.log("abebe");
 // Create a Winston logger - passing in the Logtail transport
+const winstonTransport =
+    process.env.NODE_ENV === "development"
+        ? new winston.transports.Console()
+        : new LogtailTransport(logtail);
 const logger = winston.createLogger({
-    transports: [new LogtailTransport(logtail)],
+    transports: [winstonTransport],
     // transports: new winston.transports.Console(),
     level: process.env.LOG_LEVEL || "info",
     format: combine(timestamp(), json()),
