@@ -187,10 +187,10 @@ const formatSendComplete = (
     url,
     sellValue,
     tokenData,
-    isApprove
+    isApprove,
+    isSwap,
+    isSell
 ) => {
-    const isSwap = Boolean(txn.input);
-    const isSell = !Boolean(parseInt(txn.value));
     const isFromTransfer =
         txn.from.toLowerCase() === wallet.account.toLowerCase();
     let sentMessage = `${

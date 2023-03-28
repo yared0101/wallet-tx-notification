@@ -172,7 +172,7 @@ const processCompleted = async (txn, wallet) => {
         txn,
     });
     const isSell = !Boolean(parseInt(txn.value));
-    const isSwap = !(txn.input === "" || txn.input === "0x");
+    let isSwap = !(txn.input === "" || txn.input === "0x");
     const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
         txn.input = "";
@@ -225,16 +225,30 @@ const processCompleted = async (txn, wallet) => {
     const tokenData = isSwap
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
         : undefined;
-    console.log(tokenData);
-    const hasTokenData = tokenData ? (tokenData.length ? true : false) : false;
-    if (isSwap && !isSell && !hasTokenData) {
+    if (!tokenData) {
         logger.info({
-            errorMessage: "swap buy tx not getting token data",
+            errorMessage:
+                "error while getting token data(should return empty array atleast)",
             txn,
             tokenData,
         });
         return false;
     }
+    if (!tokenData.length) {
+        isSwap = false;
+    }
+    console.log(tokenData);
+    // const hasTokenData = tokenData ? (tokenData.length ? true : false) : false;
+    // if (isSwap && !isSell && !hasTokenData) {
+    //     logger.info({
+    //         errorMessage: "swap buy tx not getting token data",
+    //         txn,
+    //         tokenData,
+    //     });
+    //     return false;
+    // }
+    // if (isSwap && !tokenData) {
+    // }
     // if (isSell && !isApprove && !extraData) {
     //     logger.info({
     //         errorMessage: "sell tx not getting internal tx",
@@ -249,7 +263,9 @@ const processCompleted = async (txn, wallet) => {
         baseUrl,
         isSell && extraData?.value,
         tokenData,
-        isApprove
+        isApprove,
+        isSwap,
+        isSell
     );
     if (!message) {
         console.log({
