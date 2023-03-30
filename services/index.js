@@ -177,7 +177,7 @@ const processCompleted = async (txn, wallet) => {
     if (!isSwap) {
         txn.input = "";
     }
-    console.log({ input10: txn.input?.substring(0, 10) });
+    console.log({ input10: txn.input?.substring(0, 10), isSwap });
     let transferFilter = {};
     if (!isSwap) {
         transferFilter =
@@ -189,7 +189,7 @@ const processCompleted = async (txn, wallet) => {
         isSell && (await getInternalTransaction(txn.hash, wallet.account));
     let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
     if (isApprove) {
-        filter = { ...filter, sendApprove: true };
+        filter = { sendApprove: true };
     }
     filter = {
         ...filter,
@@ -224,7 +224,7 @@ const processCompleted = async (txn, wallet) => {
     });
     const tokenData = isSwap
         ? await erc20TokenTransferEvents(wallet.account, txn.hash)
-        : undefined;
+        : [];
     if (!tokenData) {
         logger.info({
             errorMessage:
