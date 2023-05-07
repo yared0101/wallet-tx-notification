@@ -5,6 +5,7 @@ const {
     formatSendChannels,
     formatSendTokens,
     formatSendMatchingTokens,
+    reply,
 } = require("../utils");
 /**
  *
@@ -13,17 +14,18 @@ const {
 module.exports = (bot) => {
     bot.hears(displayStrings.home, async (ctx) => {
         session[ctx.chat.id] = {};
-        await ctx.reply("Choose one of the buttons", markups.homeMarkup);
+        await reply(ctx, "Choose one of the buttons", markups.homeMarkup);
     });
     bot.hears(displayStrings.addChannel, async (ctx) => {
         session[ctx.chat.id] = { [displayStrings.addChannel]: {} };
-        await ctx.reply(
+        await reply(
+            ctx,
             "please forward a message from the channel(add me as an admin)"
         );
     });
     bot.hears(displayStrings.addWallet, async (ctx) => {
         session[ctx.chat.id] = { [displayStrings.addWallet]: {} };
-        await ctx.reply("please send wallet address");
+        await reply(ctx, "please send wallet address");
     });
     bot.hears(displayStrings.removeWallet, async (ctx) => {
         try {
@@ -35,8 +37,8 @@ module.exports = (bot) => {
                     wallets: wallets,
                 },
             };
-            await ctx.reply(formatSendWallets(wallets));
-            await ctx.reply("please send wallet number from the list");
+            await reply(ctx, formatSendWallets(wallets));
+            await reply(ctx, "please send wallet number from the list");
         } catch (e) {}
     });
     bot.hears(displayStrings.removeChannel, async (ctx) => {
@@ -49,8 +51,8 @@ module.exports = (bot) => {
                     channels: channels,
                 },
             };
-            await ctx.reply(formatSendChannels(channels));
-            await ctx.reply("please send channel number from the list");
+            await reply(ctx, formatSendChannels(channels));
+            await reply(ctx, "please send channel number from the list");
         } catch (e) {}
     });
     bot.hears(displayStrings.listWallets, async (ctx) => {
@@ -66,7 +68,8 @@ module.exports = (bot) => {
         displayStrings.channelSelected.addWalletToChannel,
         async (ctx) => {
             if (!session[ctx.chat.id]?.selectedChannelId) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "no channel has been selected to add wallet to, please select channel"
                 );
                 return await selectChannel(ctx);
@@ -88,8 +91,8 @@ module.exports = (bot) => {
                         wallets: wallets,
                     },
                 };
-                await ctx.reply(formatSendWallets(wallets));
-                await ctx.reply("please send wallet number from the list");
+                await reply(ctx, formatSendWallets(wallets));
+                await reply(ctx, "please send wallet number from the list");
             } catch (e) {}
         }
     );
@@ -97,7 +100,8 @@ module.exports = (bot) => {
         displayStrings.channelSelected.removeWalletFromChannel,
         async (ctx) => {
             if (!session[ctx.chat.id]?.selectedChannelId) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "no channel has been selected to remove wallet from, please select channel"
                 );
                 return await selectChannel(ctx);
@@ -115,7 +119,8 @@ module.exports = (bot) => {
                     orderBy: { id: "asc" },
                 });
                 if (!wallets.length) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `no wallet found in the channel, please use \n${displayStrings.channelSelected.addWalletToChannel}\nto add wallet`
                     );
                 }
@@ -124,14 +129,15 @@ module.exports = (bot) => {
                         wallets: wallets,
                     },
                 };
-                await ctx.reply(formatSendWallets(wallets));
-                await ctx.reply("please send wallet number from the list");
+                await reply(ctx, formatSendWallets(wallets));
+                await reply(ctx, "please send wallet number from the list");
             } catch (e) {}
         }
     );
     bot.hears(displayStrings.channelSelected.setMinimumEther, async (ctx) => {
         if (!session[ctx.chat.id]?.selectedChannelId) {
-            await ctx.reply(
+            await reply(
+                ctx,
                 "no channel has been selected to set minimum ether to, please select channel"
             );
             return await selectChannel(ctx);
@@ -140,14 +146,16 @@ module.exports = (bot) => {
             session[ctx.chat.id].setting = {
                 [displayStrings.channelSelected.setMinimumEther]: {},
             };
-            await ctx.reply(
+            await reply(
+                ctx,
                 "please send minimum ether value, send 0 to unset minimum value"
             );
         } catch (e) {}
     });
     bot.hears(displayStrings.channelSelected.editChannel, async (ctx) => {
         if (!session[ctx.chat.id]?.selectedChannelId) {
-            await ctx.reply(
+            await reply(
+                ctx,
                 "no channel has been selected to add channel to, please select channel"
             );
             return await selectChannel(ctx);
@@ -155,11 +163,12 @@ module.exports = (bot) => {
         session[ctx.chat.id] = {
             [displayStrings.channelSelected.editChannel]: {},
         };
-        await ctx.reply("please send channel name");
+        await reply(ctx, "please send channel name");
     });
     bot.hears(displayStrings.channelSelected.channelSettings, async (ctx) => {
         if (!session[ctx.chat.id]?.selectedChannelId) {
-            await ctx.reply(
+            await reply(
+                ctx,
                 "no channel has been selected, please select channel"
             );
             return await selectChannel(ctx);
@@ -169,7 +178,8 @@ module.exports = (bot) => {
                 channelId: session[ctx.chat.id].selectedChannelId,
             },
         });
-        await ctx.reply(
+        await reply(
+            ctx,
             `please toggle settings for channel ${channel.name}`,
             markups.channelSettingsInline(channel)
         );
@@ -179,12 +189,14 @@ module.exports = (bot) => {
         async (ctx) => {
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
-                    await ctx.reply(
+                    await reply(
+                        ctx,
                         "no channel has been selected to add wallet to, please select channel"
                     );
                     return await selectChannel(ctx);
                 }
-                await ctx.reply(
+                await reply(
+                    ctx,
                     formatSendWallets(
                         await prisma.account.findMany({
                             orderBy: { id: "asc" },
@@ -201,7 +213,7 @@ module.exports = (bot) => {
                     )
                 );
             } catch (e) {
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         }
     );
@@ -210,12 +222,14 @@ module.exports = (bot) => {
         async (ctx) => {
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
-                    await ctx.reply(
+                    await reply(
+                        ctx,
                         "no channel has been selected to add wallet to, please select channel"
                     );
                     return await selectChannel(ctx);
                 }
-                await ctx.reply(
+                await reply(
+                    ctx,
                     formatSendTokens(
                         (
                             await prisma.channel.findFirst({
@@ -232,13 +246,14 @@ module.exports = (bot) => {
                 );
             } catch (e) {
                 console.log(e);
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         }
     );
     bot.hears(displayStrings.channelSelected.addBlackListToken, async (ctx) => {
         if (!session[ctx.chat.id]?.selectedChannelId) {
-            await ctx.reply(
+            await reply(
+                ctx,
                 "no channel has been selected to add token to, please select channel"
             );
             return await selectChannel(ctx);
@@ -247,14 +262,15 @@ module.exports = (bot) => {
             session[ctx.chat.id].setting = {
                 [displayStrings.channelSelected.addBlackListToken]: {},
             };
-            await ctx.reply("please send token address");
+            await reply(ctx, "please send token address");
         } catch (e) {}
     });
     bot.hears(
         displayStrings.channelSelected.removeBlackListToken,
         async (ctx) => {
             if (!session[ctx.chat.id]?.selectedChannelId) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "no channel has been selected to remove token from, please select channel"
                 );
                 return await selectChannel(ctx);
@@ -271,7 +287,8 @@ module.exports = (bot) => {
                     })
                 )?.blackListedTokens;
                 if (!tokens.length) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `no token found in the channel, please use \n${displayStrings.channelSelected.addBlackListToken}\nto add token to blacklist`
                     );
                 }
@@ -280,8 +297,8 @@ module.exports = (bot) => {
                         tokens,
                     },
                 };
-                await ctx.reply(formatSendTokens(tokens));
-                await ctx.reply("please send token number from the list");
+                await reply(ctx, formatSendTokens(tokens));
+                await reply(ctx, "please send token number from the list");
             } catch (e) {}
         }
     );
@@ -290,12 +307,14 @@ module.exports = (bot) => {
         async (ctx) => {
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
-                    await ctx.reply(
+                    await reply(
+                        ctx,
                         "no channel has been selected! please select channel"
                     );
                     return await selectChannel(ctx);
                 }
-                await ctx.reply(
+                await reply(
+                    ctx,
                     formatSendTokens(
                         (
                             await prisma.channel.findFirst({
@@ -312,7 +331,7 @@ module.exports = (bot) => {
                 );
             } catch (e) {
                 console.log(e);
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         }
     );
@@ -320,7 +339,8 @@ module.exports = (bot) => {
         displayStrings.channelSelected.addBuyBlackListToken,
         async (ctx) => {
             if (!session[ctx.chat.id]?.selectedChannelId) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "no channel has been selected to add token to, please select channel"
                 );
                 return await selectChannel(ctx);
@@ -329,7 +349,7 @@ module.exports = (bot) => {
                 session[ctx.chat.id].setting = {
                     [displayStrings.channelSelected.addBuyBlackListToken]: {},
                 };
-                await ctx.reply("please send token address");
+                await reply(ctx, "please send token address");
             } catch (e) {}
         }
     );
@@ -337,7 +357,8 @@ module.exports = (bot) => {
         displayStrings.channelSelected.removeBuyBlackListToken,
         async (ctx) => {
             if (!session[ctx.chat.id]?.selectedChannelId) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "no channel has been selected to remove token from, please select channel"
                 );
                 return await selectChannel(ctx);
@@ -354,7 +375,8 @@ module.exports = (bot) => {
                     })
                 )?.buyBlackListedTokens;
                 if (!tokens.length) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `no token found in the channel, please use \n${displayStrings.channelSelected.addBuyBlackListToken}\nto add token to blacklist`
                     );
                 }
@@ -363,8 +385,8 @@ module.exports = (bot) => {
                         tokens,
                     },
                 };
-                await ctx.reply(formatSendTokens(tokens));
-                await ctx.reply("please send token number from the list");
+                await reply(ctx, formatSendTokens(tokens));
+                await reply(ctx, "please send token number from the list");
             } catch (e) {}
         }
     );
@@ -376,13 +398,14 @@ module.exports = (bot) => {
                     addFile: false,
                 },
             };
-            await ctx.reply(
+            await reply(
+                ctx,
                 `please press ${displayStrings.fileCompareOptions.addFile} to start adding files`,
                 markups.fileCompareMarkup
             );
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         }
     });
     bot.hears(displayStrings.fileCompareOptions.addFile, async (ctx) => {
@@ -394,20 +417,22 @@ module.exports = (bot) => {
                     addFile: true,
                 },
             };
-            await ctx.reply(
+            await reply(
+                ctx,
                 `please start sending the csv formatted files`,
                 markups.fileCompareMarkup
             );
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         }
     });
     bot.hears(
         displayStrings.fileCompareOptions.addBlackListToken,
         async (ctx) => {
             if (!session[ctx.chat.id]?.fileCompare) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
                     markups.homeMarkup
                 );
@@ -416,7 +441,7 @@ module.exports = (bot) => {
                 session[ctx.chat.id].setting = {
                     [displayStrings.fileCompareOptions.addBlackListToken]: {},
                 };
-                await ctx.reply("please send token address");
+                await reply(ctx, "please send token address");
             } catch (e) {}
         }
     );
@@ -425,19 +450,21 @@ module.exports = (bot) => {
         async (ctx) => {
             try {
                 if (!session[ctx.chat.id]?.fileCompare) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
                         markups.homeMarkup
                     );
                 }
-                await ctx.reply(
+                await reply(
+                    ctx,
                     formatSendTokens(
                         await prisma.blackListTokensForFiles.findMany()
                     )
                 );
             } catch (e) {
                 console.log(e);
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         }
     );
@@ -445,7 +472,8 @@ module.exports = (bot) => {
         displayStrings.fileCompareOptions.removeBlackListToken,
         async (ctx) => {
             if (!session[ctx.chat.id]?.fileCompare) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
                     markups.homeMarkup
                 );
@@ -453,7 +481,8 @@ module.exports = (bot) => {
             try {
                 const tokens = await prisma.blackListTokensForFiles.findMany();
                 if (!tokens.length) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `no token found , please use \n${displayStrings.fileCompareOptions.addBlackListToken}\nto add token to blacklist`
                     );
                 }
@@ -462,8 +491,8 @@ module.exports = (bot) => {
                         tokens,
                     },
                 };
-                await ctx.reply(formatSendTokens(tokens));
-                await ctx.reply("please send token number from the list");
+                await reply(ctx, formatSendTokens(tokens));
+                await reply(ctx, "please send token number from the list");
             } catch (e) {}
         }
     );
@@ -476,21 +505,23 @@ module.exports = (bot) => {
         async (ctx) => {
             try {
                 if (!session[ctx.chat.id]?.fileCompare) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
                         markups.homeMarkup
                     );
                 }
                 if (!session[ctx.chat.id].fileCompare.files.length) {
-                    return await ctx.reply(
+                    return await reply(
+                        ctx,
                         "No file has been added, please add files first"
                     );
                 }
                 if (session[ctx.chat.id].fileCompare.files.length < 2) {
-                    return await ctx.reply("At least 2 files are necessary");
+                    return await reply(ctx, "At least 2 files are necessary");
                 }
                 const files = session[ctx.chat.id].fileCompare.files;
-                await ctx.reply("please wait, it may be a while ...");
+                await reply(ctx, "please wait, it may be a while ...");
                 const fileUrls = await fileUrlsLoader(files, bot);
                 const downloadedFiles = await getFiles(fileUrls);
                 const blackListTokens =
@@ -531,33 +562,36 @@ module.exports = (bot) => {
                     matchingTokens,
                     foundWallets
                 );
-                await ctx.reply(matchedFinalText, { parse_mode: "HTML" });
+                await reply(ctx, matchedFinalText, { parse_mode: "HTML" });
             } catch (e) {
                 console.log(e);
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         }
     );
     bot.hears(displayStrings.fileCompareOptions.cleanFiles, async (ctx) => {
         try {
             if (!session[ctx.chat.id]?.fileCompare) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     `Please press ${displayStrings.fileCompare} to start dealing with file blacklists`,
                     markups.homeMarkup
                 );
             }
             if (!session[ctx.chat.id]?.fileCompare.files.length) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     "No file has been added, please add files first"
                 );
             }
             session[ctx.chat.id].fileCompare.files = [];
-            await ctx.reply(
+            await reply(
+                ctx,
                 `All files have been cleaned from memory, press ${displayStrings.fileCompareOptions.addFile} to start adding`
             );
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         }
     });
 };
@@ -572,9 +606,9 @@ const selectChannel = async (ctx) => {
         });
         const message = formatSendChannels(channels);
         const mark = markups.selectChannelMarkup(channels);
-        await ctx.reply(message, mark);
+        await reply(ctx, message, mark);
     } catch (e) {
-        await ctx.reply("something went wrong");
+        await reply(ctx, "something went wrong");
     }
 };
 /**
@@ -583,7 +617,8 @@ const selectChannel = async (ctx) => {
  */
 const listChannels = async (ctx) => {
     try {
-        await ctx.reply(
+        await reply(
+            ctx,
             formatSendChannels(
                 await prisma.channel.findMany({
                     orderBy: { id: "asc" },
@@ -592,7 +627,7 @@ const listChannels = async (ctx) => {
         );
     } catch (e) {
         console.log(e);
-        await ctx.reply("something went wrong");
+        await reply(ctx, "something went wrong");
     }
 };
 
@@ -602,7 +637,8 @@ const listChannels = async (ctx) => {
  */
 const listWallets = async (ctx) => {
     try {
-        await ctx.reply(
+        await reply(
+            ctx,
             formatSendWallets(
                 await prisma.account.findMany({
                     orderBy: { id: "asc" },
@@ -610,7 +646,7 @@ const listWallets = async (ctx) => {
             )
         );
     } catch (e) {
-        await ctx.reply("something went wrong");
+        await reply(ctx, "something went wrong");
     }
 };
 

@@ -317,6 +317,7 @@ const markups = {
 
 const session = {};
 
+const MAX_MESSAGE_LENGTH = 4000;
 const minTime = 2;
 const defaultTime = 10;
 // const url = process.env.GOERLI_NET_URL;
@@ -343,4 +344,5 @@ module.exports = {
     baseUrl,
     buyTokens,
     logger,
+    MAX_MESSAGE_LENGTH,
 };

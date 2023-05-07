@@ -5,6 +5,7 @@ const {
     // formatSendWallets,
     // formatSendPending,
     // formatSendComplete,
+    reply,
 } = require("../utils");
 // const { getLastTransaction, subscribe } = require("../utils/cryptoFunctions");
 /**
@@ -14,19 +15,19 @@ const {
 module.exports = (bot) => {
     bot.command("start", async (ctx) => {
         session[ctx.chat.id] = {};
-        await ctx.reply("Choose one of the buttons", markups.homeMarkup);
+        await reply(ctx, "Choose one of the buttons", markups.homeMarkup);
     });
     // bot.command("walletadd", async (ctx) => {
     //     try {
     //         const account = ctx.message.text.split(" ")[1];
     //         let nameTag = ctx.message.text.split(" ")[2];
     //         if (!account) {
-    //             return await ctx.reply(
+    //             return await reply(ctx,
     //                 "Please send address next to the command like /walletAdd 0x... nametag"
     //             );
     //         }
     //         if (!nameTag) {
-    //             return await ctx.reply(
+    //             return await reply(ctx,
     //                 "Please send name tag next to the wallet like /walletAdd 0x... nametag"
     //             );
     //         }
@@ -35,21 +36,21 @@ module.exports = (bot) => {
     //         fullArray.shift();
     //         nameTag = fullArray.join(" ");
     //         if (!(account[0] === "0" && account[1] === "x")) {
-    //             ctx.reply("please send a proper wallet that starts with 0x");
+    //             reply(ctx,"please send a proper wallet that starts with 0x");
     //             return;
     //         }
-    //         await ctx.reply("... processing address");
+    //         await reply(ctx,"... processing address");
 
     //         const prev = await prisma.account.findUnique({
     //             where: { account },
     //         });
     //         if (prev) {
-    //             ctx.reply("wallet already exists");
+    //             reply(ctx,"wallet already exists");
     //             return;
     //         }
     //         const data = await getLastTransaction(account);
     //         if (!data?.hash) {
-    //             return await ctx.reply(
+    //             return await reply(ctx,
     //                 "couldn't get last transaction of wallet, please try again"
     //             );
     //         }
@@ -63,7 +64,7 @@ module.exports = (bot) => {
     //         });
     //         subscribe(processPending);
 
-    //         await ctx.reply(`wallet \n${nameTag}\nadded to list successfully`);
+    //         await reply(ctx,`wallet \n${nameTag}\nadded to list successfully`);
     //     } catch (e) {
     //         console.log(e);
     //         return;
@@ -71,7 +72,7 @@ module.exports = (bot) => {
     // });
     // bot.command("walletlist", async (ctx) => {
     //     try {
-    //         await ctx.reply(
+    //         await reply(ctx,
     //             formatSendWallets(
     //                 await prisma.account.findMany({
     //                     orderBy: { account: "asc" },
@@ -79,14 +80,14 @@ module.exports = (bot) => {
     //             )
     //         );
     //     } catch (e) {
-    //         await ctx.reply("something went wrong");
+    //         await reply(ctx,"something went wrong");
     //     }
     // });
     // bot.command("walletremove", async (ctx) => {
     //     try {
     //         const index = parseInt(ctx.message.text.split(" ")[1]);
     //         if (!index) {
-    //             return await ctx.reply(
+    //             return await reply(ctx,
     //                 "Please send index to delete next to the command like /walletRemove 2"
     //             );
     //         }
@@ -94,10 +95,10 @@ module.exports = (bot) => {
     //             orderBy: { account: "asc" },
     //         });
     //         if (!wallets.length) {
-    //             return await ctx.reply(`there are no registered wallets!`);
+    //             return await reply(ctx,`there are no registered wallets!`);
     //         }
     //         if (index < 1 || index > wallets.length) {
-    //             return await ctx.reply(
+    //             return await reply(ctx,
     //                 `please send number between 1 and ${wallets.length}`
     //             );
     //         }
@@ -113,24 +114,26 @@ module.exports = (bot) => {
     //             where: { id: wallets[index - 1].id },
     //         });
     //         subscribe(processPending);
-    //         await ctx.reply(
+    //         await reply(ctx,
     //             `wallet \n${deleted.nameTag}\n removed successfully`
     //         );
     //     } catch (e) {
     //         console.log(e);
-    //         ctx.reply("something went wrong");
+    //         reply(ctx,"something went wrong");
     //     }
     // });
     bot.command("tokenadd", async (ctx) => {
         try {
             const token = ctx.message.text.split(" ")[1];
             if (!token) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     "Please send token next to the command like /tokenAdd 0x..."
                 );
             }
             if (!(token[0] === "0" && token[1] === "x")) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     "please send a proper token that starts with 0x"
                 );
             }
@@ -138,14 +141,15 @@ module.exports = (bot) => {
                 where: { contractId: token },
             });
             if (prev) {
-                return await ctx.reply("token already in black list");
+                return await reply(ctx, "token already in black list");
             }
             await prisma.blackListContracts.create({
                 data: {
                     contractId: token,
                 },
             });
-            await ctx.reply(
+            await reply(
+                ctx,
                 `Token \n${token}\n added to black list successfully`
             );
         } catch (e) {
@@ -155,7 +159,8 @@ module.exports = (bot) => {
     });
     bot.command("tokenlist", async (ctx) => {
         try {
-            await ctx.reply(
+            await reply(
+                ctx,
                 formatSendTokens(
                     await prisma.blackListContracts.findMany({
                         orderBy: { contractId: "asc" },
@@ -164,14 +169,15 @@ module.exports = (bot) => {
             );
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         }
     });
     bot.command("tokenremove", async (ctx) => {
         try {
             const index = parseInt(ctx.message.text.split(" ")[1]);
             if (!index) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     "Please send index next to the command like /tokenRemove 2"
                 );
             }
@@ -179,11 +185,12 @@ module.exports = (bot) => {
                 orderBy: { contractId: "asc" },
             });
             if (!tokens.length) {
-                await ctx.reply(`there are no registered wallets!`);
+                await reply(ctx, `there are no registered wallets!`);
                 return;
             }
             if (index < 1 || index > tokens.length) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     `please send number between 1 and ${tokens.length}`
                 );
                 return;
@@ -191,19 +198,22 @@ module.exports = (bot) => {
             const deleted = await prisma.blackListContracts.delete({
                 where: { id: tokens[index - 1].id },
             });
-            await ctx.reply(`token ${deleted.contractId} removed successfully`);
+            await reply(
+                ctx,
+                `token ${deleted.contractId} removed successfully`
+            );
         } catch (e) {
             console.log(e);
-            ctx.reply("something went wrong");
+            reply(ctx, "something went wrong");
         }
     });
     bot.command("changetime", async (ctx) => {
         const time = parseInt(ctx.message.text.split(" ")[1]);
         if (isNaN(time)) {
-            return ctx.reply("please send number after change time command");
+            return reply(ctx, "please send number after change time command");
         }
         if (time < minTime) {
-            return ctx.reply(`time can't be less than ${minTime}`);
+            return reply(ctx, `time can't be less than ${minTime}`);
         }
         const timeData = await prisma.time.findFirst();
         if (timeData) {
@@ -215,7 +225,8 @@ module.exports = (bot) => {
                     totalTime: time,
                 },
             });
-            ctx.reply(
+            reply(
+                ctx,
                 `time changed from ${timeData.totalTime} sec to ${time} sec`
             );
         } else {
@@ -224,7 +235,8 @@ module.exports = (bot) => {
                     totalTime: time,
                 },
             });
-            await ctx.reply(
+            await reply(
+                ctx,
                 `time changed from default ${defaultTime} sec to ${time} sec`
             );
         }
@@ -232,12 +244,12 @@ module.exports = (bot) => {
     // bot.command("sendcomplete", async (ctx) => {
     //     const sendC = ctx.message.text.split(" ")[1];
     //     if (!sendC) {
-    //         return ctx.reply(
+    //         return reply(ctx,
     //             "please send true or false after /sendComplete command"
     //         );
     //     }
     //     if (!sendC.match(/(true|false)$/i)) {
-    //         return ctx.reply(
+    //         return reply(ctx,
     //             `please send either true or false. false will disable completed messages!`
     //         );
     //     }
@@ -251,7 +263,7 @@ module.exports = (bot) => {
     //                 sendComplete: sendC === "true" ? true : false,
     //             },
     //         });
-    //         ctx.reply(
+    //         reply(ctx,
     //             `configuration changed to ${
     //                 sendC === "true"
     //                     ? "send complete transactions"
@@ -265,7 +277,7 @@ module.exports = (bot) => {
     //                 sendComplete: sendC === "true" ? true : false,
     //             },
     //         });
-    //         ctx.reply(
+    //         reply(ctx,
     //             `configuration set to ${
     //                 sendC === "true"
     //                     ? "send complete transactions"

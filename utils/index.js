@@ -1,4 +1,4 @@
-const { displayStrings, buyTokens } = require("../config");
+const { displayStrings, buyTokens, MAX_MESSAGE_LENGTH } = require("../config");
 
 const formatSendWallets = (list) => {
     let sent = "";
@@ -289,6 +289,22 @@ const isBlackListed = (contractAddress, tokens, pendingData) => {
         return true;
     }
 };
+/**
+ *
+ * @param {import('telegraf').Context} ctx context of bot
+ * @param {string} message message to send
+ */
+const reply = async (ctx, message, other) => {
+    while (message) {
+        if (message.length > MAX_MESSAGE_LENGTH) {
+            await ctx.reply(message.substring(0, MAX_MESSAGE_LENGTH));
+            message = message.substring(MAX_MESSAGE_LENGTH);
+        } else {
+            await ctx.reply(message, other);
+            break;
+        }
+    }
+};
 module.exports = {
     formatSendTokens,
     formatSendWallets,
@@ -299,4 +315,5 @@ module.exports = {
     formatSendDetailChannel,
     toDecimalComplete,
     formatSendMatchingTokens,
+    reply,
 };

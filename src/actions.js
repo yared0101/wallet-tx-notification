@@ -1,7 +1,6 @@
 const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups } = require("../config");
-const { formatSendDetailChannel } = require("../utils");
-
+const { formatSendDetailChannel, reply } = require("../utils");
 /**
  *
  * @param {import("telegraf").Telegraf} bot
@@ -18,13 +17,14 @@ module.exports = (bot) => {
                     channelId: id,
                 },
             });
-            await ctx.reply(
+            await reply(
+                ctx,
                 formatSendDetailChannel(channel),
                 markups.selectedChannel
             );
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         } finally {
             try {
                 await ctx.answerCbQuery();
@@ -36,7 +36,8 @@ module.exports = (bot) => {
             const toggle = ctx.match[0].split("_")[1];
             const id = session[ctx.chat.id]?.selectedChannelId;
             if (!id) {
-                await ctx.reply(
+                await reply(
+                    ctx,
                     "please select channel first",
                     markups.homeMarkup
                 );
@@ -90,7 +91,7 @@ module.exports = (bot) => {
             return await ctx.answerCbQuery();
         } catch (e) {
             console.log(e);
-            await ctx.reply("something went wrong");
+            await reply(ctx, "something went wrong");
         } finally {
             try {
                 await ctx.answerCbQuery();

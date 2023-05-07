@@ -1,7 +1,7 @@
 const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups, displayStrings } = require("../config");
 const { processPending } = require("../services");
-const { formatSendDetailChannel } = require("../utils");
+const { formatSendDetailChannel, reply } = require("../utils");
 const {
     subscribe,
     getLastTransaction,
@@ -25,7 +25,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeWallet(ctx, number);
                 } else if (
@@ -33,7 +33,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeChannel(ctx, number);
                 } else if (
@@ -43,7 +43,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeWalletFromChannel(ctx, number);
                 } else if (
@@ -53,7 +53,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeTokenFromChannel(ctx, number);
                 } else if (
@@ -63,7 +63,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeBuyTokenFromChannel(ctx, number);
                 } else if (
@@ -73,7 +73,8 @@ module.exports = (bot) => {
                 ) {
                     const number = Number(ctx.message.text);
                     if (isNaN(number) || number < 0) {
-                        return await ctx.reply(
+                        return await reply(
+                            ctx,
                             "please send a number value greater than 0"
                         );
                     }
@@ -85,7 +86,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await addWalletToChannel(ctx, number);
                 } else if (
@@ -109,7 +110,7 @@ module.exports = (bot) => {
                 ) {
                     const number = parseInt(ctx.message.text);
                     if (isNaN(number)) {
-                        return await ctx.reply("please send a number value");
+                        return await reply(ctx, "please send a number value");
                     }
                     await removeTokenFromFileBlacklist(ctx, number);
                 } else if (
@@ -126,7 +127,8 @@ module.exports = (bot) => {
                 ) {
                     await addWallet(ctx.message.text); //skipped
                 } else {
-                    await ctx.reply(
+                    await reply(
+                        ctx,
                         "please use one of the buttons",
                         session[ctx.chat.id]?.selectedChannelId
                             ? markups.selectedChannel
@@ -135,7 +137,7 @@ module.exports = (bot) => {
                 }
             } catch (e) {
                 console.log(e);
-                await ctx.reply("something went wrong");
+                await reply(ctx, "something went wrong");
             }
         } else {
             //when document is sent
@@ -149,7 +151,8 @@ module.exports = (bot) => {
                             );
                             const fileLength =
                                 session[ctx.chat.id].fileCompare.files.length;
-                            await ctx.reply(
+                            await reply(
+                                ctx,
                                 `${fileLength} files sent. you can send more files ${
                                     fileLength > 1
                                         ? `or press Display Results to process files`
@@ -157,16 +160,18 @@ module.exports = (bot) => {
                                 }`
                             );
                         } else {
-                            await ctx.reply("Please send csv file");
+                            await reply(ctx, "Please send csv file");
                         }
                     } else {
-                        await ctx.reply(
+                        await reply(
+                            ctx,
                             `please press ${displayStrings.fileCompareOptions.addFile} to start adding files`,
                             markups.fileCompareMarkup
                         );
                     }
                 } else {
-                    await ctx.reply(
+                    await reply(
+                        ctx,
                         "please use one of the buttons",
                         markups.homeMarkup
                     );
@@ -184,10 +189,14 @@ const addChannel = async (ctx) => {
     try {
         const sentChannel = ctx?.message?.forward_from_chat;
         if (!sentChannel) {
-            return await ctx.reply("please forward a message from the channel");
+            return await reply(
+                ctx,
+                "please forward a message from the channel"
+            );
         }
         if (sentChannel.type !== "channel") {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 "the forwarded message must be from a channel"
             );
         }
@@ -200,14 +209,15 @@ const addChannel = async (ctx) => {
         session[ctx.chat.id] = {
             selectedChannelId: sentChannel.username,
         };
-        await ctx.reply(
+        await reply(
+            ctx,
             formatSendDetailChannel(channel),
             markups.selectedChannel
         );
-        await ctx.reply("channel added successfully, please modify settings");
+        await reply(ctx, "channel added successfully, please modify settings");
     } catch (e) {
         console.log(e);
-        await ctx.reply("something went wrong");
+        await reply(ctx, "something went wrong");
     }
 };
 /**
@@ -220,28 +230,29 @@ const addWallet = async (ctx, text) => {
     if (!ses.number) {
         ses.number = text;
         session[ctx.chat.id][displayStrings.addWallet] = ses;
-        return await ctx.reply("please send wallet name tag");
+        return await reply(ctx, "please send wallet name tag");
     } else if (!ses.nameTag) {
         ses.nameTag = text;
         try {
             const account = ses.number;
             let nameTag = ses.nameTag;
             if (!(account[0] === "0" && account[1] === "x")) {
-                ctx.reply("please send a proper wallet that starts with 0x");
+                reply(ctx, "please send a proper wallet that starts with 0x");
                 return;
             }
-            await ctx.reply("... processing address");
+            await reply(ctx, "... processing address");
 
             const prev = await prisma.account.findUnique({
                 where: { account },
             });
             if (prev) {
-                ctx.reply(`wallet ${prev.nameTag} already exists`);
+                reply(ctx, `wallet ${prev.nameTag} already exists`);
                 return;
             }
             const data = await getLastTransaction(account);
             if (!data?.hash) {
-                return await ctx.reply(
+                return await reply(
+                    ctx,
                     "couldn't get last transaction of wallet, please try again"
                 );
             }
@@ -255,7 +266,8 @@ const addWallet = async (ctx, text) => {
             });
             subscribe(processPending);
             session[ctx.chat.id] = {};
-            await ctx.reply(
+            await reply(
+                ctx,
                 `wallet \n${nameTag}\nadded to list successfully`,
                 markups.homeMarkup
             );
@@ -277,7 +289,8 @@ const removeWallet = async (ctx, number) => {
     const wallets = ses.wallets;
     try {
         if (number > wallets.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${wallets.length}`
             );
         }
@@ -288,10 +301,10 @@ const removeWallet = async (ctx, number) => {
             },
         });
         session[ctx.chat.id] = {};
-        await ctx.reply("wallet removed successfully", markups.homeMarkup);
+        await reply(ctx, "wallet removed successfully", markups.homeMarkup);
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -305,7 +318,8 @@ const removeChannel = async (ctx, number) => {
     const channels = ses.channels;
     try {
         if (number > channels.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${channels.length}`
             );
         }
@@ -316,10 +330,10 @@ const removeChannel = async (ctx, number) => {
             },
         });
         session[ctx.chat.id] = {};
-        await ctx.reply("Channel removed successfully", markups.homeMarkup);
+        await reply(ctx, "Channel removed successfully", markups.homeMarkup);
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -336,7 +350,8 @@ const removeWalletFromChannel = async (ctx, number) => {
     const wallets = ses.wallets;
     try {
         if (number > wallets.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${wallets.length}`
             );
         }
@@ -356,13 +371,14 @@ const removeWalletFromChannel = async (ctx, number) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             "wallet removed from channel successfully",
             markups.selectedChannel
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -379,7 +395,8 @@ const removeTokenFromChannel = async (ctx, number) => {
     const tokens = ses.tokens;
     try {
         if (number > tokens.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${tokens.length}`
             );
         }
@@ -401,7 +418,8 @@ const removeTokenFromChannel = async (ctx, number) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             `token removed from sell ${
                 channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
                     ? "white"
@@ -411,7 +429,7 @@ const removeTokenFromChannel = async (ctx, number) => {
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -428,7 +446,8 @@ const removeBuyTokenFromChannel = async (ctx, number) => {
     const tokens = ses.tokens;
     try {
         if (number > tokens.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${tokens.length}`
             );
         }
@@ -450,7 +469,8 @@ const removeBuyTokenFromChannel = async (ctx, number) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             `token removed from buy ${
                 channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
                     ? "white"
@@ -460,7 +480,7 @@ const removeBuyTokenFromChannel = async (ctx, number) => {
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -488,13 +508,14 @@ const setMinimumEther = async (ctx, number) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             `minimum ether value has been ${number ? "set" : "unset"}`,
             markups.selectedChannel
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -511,7 +532,8 @@ const addWalletToChannel = async (ctx, number) => {
     const wallets = ses.wallets;
     try {
         if (number > wallets.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${wallets.length}`
             );
         }
@@ -531,13 +553,14 @@ const addWalletToChannel = async (ctx, number) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             "wallet added to channel successfully",
             markups.selectedChannel
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -554,7 +577,7 @@ const addTokenToChannel = async (ctx, token) => {
     try {
         const tokenData = await getTokenInfo(token);
         if (!tokenData) {
-            return ctx.reply("couldn't get token info");
+            return reply(ctx, "couldn't get token info");
         }
         const channel = await prisma.channel.findFirst({
             where: {
@@ -573,7 +596,8 @@ const addTokenToChannel = async (ctx, token) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             `token added to sell ${
                 channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
                     ? "white"
@@ -583,7 +607,7 @@ const addTokenToChannel = async (ctx, token) => {
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -600,7 +624,7 @@ const addBuyTokenToChannel = async (ctx, token) => {
     try {
         const tokenData = await getTokenInfo(token);
         if (!tokenData) {
-            return ctx.reply("couldn't get token info");
+            return reply(ctx, "couldn't get token info");
         }
         const channel = await prisma.channel.findFirst({
             where: {
@@ -619,7 +643,8 @@ const addBuyTokenToChannel = async (ctx, token) => {
             },
         });
         session[ctx.chat.id].setting = {};
-        await ctx.reply(
+        await reply(
+            ctx,
             `token added to buy ${
                 channel.type === CHANNEL_BLACK_LIST_TYPE.WHITELIST
                     ? "white"
@@ -629,7 +654,7 @@ const addBuyTokenToChannel = async (ctx, token) => {
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
 
@@ -648,28 +673,28 @@ const addTokenToFileBlackList = async (ctx, text) => {
         session[ctx.chat.id].setting[
             displayStrings.fileCompareOptions.addBlackListToken
         ] = ses;
-        return await ctx.reply("please send wallet name tag");
+        return await reply(ctx, "please send wallet name tag");
     } else if (!ses.nameTag) {
         ses.nameTag = text;
         try {
             const account = ses.number;
             let nameTag = ses.nameTag;
             if (!(account[0] === "0" && account[1] === "x")) {
-                ctx.reply("please send a proper wallet that starts with 0x");
+                reply(ctx, "please send a proper wallet that starts with 0x");
                 return;
             }
-            await ctx.reply("... processing address");
+            await reply(ctx, "... processing address");
 
             const prev = await prisma.blackListTokensForFiles.findFirst({
                 where: { contractId: account },
             });
             if (prev) {
-                ctx.reply("token already exists");
+                reply(ctx, "token already exists");
                 return;
             }
             // const data = await getLastTransaction(account);
             // if (!data?.hash) {
-            //     return await ctx.reply(
+            //     return await reply(ctx,
             //         "couldn't get last transaction of wallet, please try again"
             //     );
             // }
@@ -681,7 +706,8 @@ const addTokenToFileBlackList = async (ctx, text) => {
             });
 
             delete session[ctx.chat.id].settings;
-            await ctx.reply(
+            await reply(
+                ctx,
                 `token \n${nameTag}\nadded to blacklist successfully`,
                 markups.fileCompareMarkup
             );
@@ -706,7 +732,8 @@ const removeTokenFromFileBlacklist = async (ctx, number) => {
     const tokens = ses.tokens;
     try {
         if (number > tokens.length || number < 1) {
-            return await ctx.reply(
+            return await reply(
+                ctx,
                 `please send number between 1 and ${tokens.length}`
             );
         }
@@ -715,12 +742,13 @@ const removeTokenFromFileBlacklist = async (ctx, number) => {
             where: { id: deletedToken.id },
         });
         delete session[ctx.chat.id].setting;
-        await ctx.reply(
+        await reply(
+            ctx,
             "token removed from blacklist successfully",
             markups.fileCompareMarkup
         );
     } catch (e) {
         console.log(e);
-        return await ctx.reply("something went wrong");
+        return await reply(ctx, "something went wrong");
     }
 };
