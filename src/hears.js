@@ -408,6 +408,36 @@ module.exports = (bot) => {
             await reply(ctx, "something went wrong");
         }
     });
+    bot.hears(displayStrings.priorityTrack, async (ctx) => {
+        try {
+            const histories = await prisma.contractAddressSettings.findMany({
+                orderBy: { createdDate: "desc" },
+            });
+            await reply(
+                ctx,
+                histories.length
+                    ? `please add new or select from last filters`
+                    : "please add new filter",
+                markups.prioritySearchDefault()
+            );
+            const markup = markups.prioritySearchHistory(histories);
+            if (histories.length) await reply(ctx, `Select`, markup);
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        }
+    });
+    bot.hears(displayStrings.priorityTrackNewSearch, async (ctx) => {
+        try {
+            session[ctx.chat.id] = {
+                [displayStrings.priorityTrackNewSearch]: {},
+            };
+            await reply(ctx, `please send contract address`);
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        }
+    });
     bot.hears(displayStrings.fileCompareOptions.addFile, async (ctx) => {
         try {
             session[ctx.chat.id] = {

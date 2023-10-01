@@ -72,7 +72,9 @@ const displayStrings = {
             }`,
     },
     home: "Home",
-    fileCompare: "Find Matching Addresses",
+    fileCompare: "Matching Addresses",
+    priorityTrack: "Priority Transactions",
+    priorityTrackNewSearch: "New Search",
     fileCompareOptions: {
         addFile: "Add File",
         displaySellResults: "Find Sell Addresses",
@@ -101,7 +103,10 @@ const markups = {
                     { text: displayStrings.removeChannel },
                     { text: displayStrings.removeWallet },
                 ],
-                [{ text: displayStrings.fileCompare }],
+                [
+                    { text: displayStrings.fileCompare },
+                    { text: displayStrings.priorityTrack },
+                ],
             ],
             resize_keyboard: true,
         },
@@ -312,6 +317,43 @@ const markups = {
                 ],
             ],
         },
+    },
+    /**
+     *
+     * @param {import("@prisma/client").ContractAddressSettings[]} histories
+     */
+    prioritySearchHistory: (histories = []) => {
+        return {
+            reply_markup: {
+                resize_keyboard: true,
+                inline_keyboard: histories.map((elem) => [
+                    {
+                        text: `${elem.contractAddress.substring(0, 4)}..., ${
+                            elem.days
+                        } days, ${elem.minPriorityFee} - ${
+                            elem.maxPriorityFee
+                        }`,
+                        callback_data: `PRIORITY_${elem.id}`,
+                    },
+                ]),
+            },
+        };
+    },
+    prioritySearchDefault: () => {
+        const defaultReply = [
+            {
+                text: displayStrings.priorityTrackNewSearch,
+            },
+            {
+                text: displayStrings.home,
+            },
+        ];
+        return {
+            reply_markup: {
+                resize_keyboard: true,
+                keyboard: [defaultReply],
+            },
+        };
     },
 };
 

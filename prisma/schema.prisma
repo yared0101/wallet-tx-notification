@@ -26,7 +26,7 @@ model PendingTransactions {
   transactionHash       String
   telegramSentMessageId Int
   accountId             Int
-  processing            Int @default(0)
+  processing            Int     @default(0)
 
   @@unique([transactionHash, accountId])
 }
@@ -84,4 +84,13 @@ model BlackListTokensForFiles {
   id         Int    @id @default(autoincrement())
   contractId String
   name       String
+}
+
+model ContractAddressSettings {
+  id              Int      @id @default(autoincrement())
+  createdDate     DateTime @default(now())
+  contractAddress String
+  minPriorityFee  Float
+  maxPriorityFee  Float
+  days            Int      @default(2)
 }

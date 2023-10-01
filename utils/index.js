@@ -34,6 +34,22 @@ const formatSendMatchingTokens = (list, matchingAccounts) => {
     }
     return sent || "No Wallets registered for listening";
 };
+const formatSendCAFilteredTxs = (transactions) => {
+    const url = process.env.MAIN_BASE_NET_URL;
+    if (!transactions.length) {
+        return "No Transactions found within the filter";
+    }
+    let sent = "Matching transactions found:\n";
+    for (let i in transactions) {
+        let transaction = transactions[i];
+        sent += `${Number(i) + 1}. ${url}/tx/${
+            transaction.hash
+        }\nMax Priority Fee: ${transaction.formattedPriorityFee}\nTimestamp: ${
+            transaction.formattedTimestamp
+        }\n`;
+    }
+    return sent;
+};
 
 const formatSendTokens = (list) => {
     let sent = "";
@@ -316,4 +332,5 @@ module.exports = {
     toDecimalComplete,
     formatSendMatchingTokens,
     reply,
+    formatSendCAFilteredTxs,
 };

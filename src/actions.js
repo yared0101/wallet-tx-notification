@@ -1,6 +1,13 @@
 const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups } = require("../config");
-const { formatSendDetailChannel, reply } = require("../utils");
+const {
+    formatSendDetailChannel,
+    reply,
+    formatSendCAFilteredTxs,
+} = require("../utils");
+const {
+    getTransactionsFromLastDayByContractAddress,
+} = require("../utils/cryptoFunctions");
 /**
  *
  * @param {import("telegraf").Telegraf} bot
@@ -22,6 +29,35 @@ module.exports = (bot) => {
                 formatSendDetailChannel(channel),
                 markups.selectedChannel
             );
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        } finally {
+            try {
+                await ctx.answerCbQuery();
+            } catch {}
+        }
+    });
+    bot.action(/PRIORITY_.*/, async (ctx) => {
+        try {
+            const id = ctx.match[0].split("_")[1];
+            await ctx.reply("Searching ...");
+            const filter = await prisma.contractAddressSettings.findUnique({
+                where: { id: Number(id) },
+            });
+            if (!filter) {
+                return await ctx.reply(
+                    "couldn't find the selected filter, try adding a new one"
+                );
+            }
+            const priorityFeeTransactions =
+                await getTransactionsFromLastDayByContractAddress(filter);
+            const sentMessage = formatSendCAFilteredTxs(
+                priorityFeeTransactions
+            );
+            return await ctx.reply(sentMessage, {
+                disable_web_page_preview: true,
+            });
         } catch (e) {
             console.log(e);
             await reply(ctx, "something went wrong");

@@ -123,10 +123,58 @@ const getTokenInfo = async (contractAddress) => {
         return undefined;
     }
 };
+
+const alchemyTransaction = async (txHash) => {
+    const transaction = await web3.eth.getTransaction(txHash);
+    const priorityFee = parseInt(transaction.maxPriorityFeePerGas || "") / 1e9;
+    const timedata = await web3.eth.getBlock(transaction.blockNumber);
+    const formattedPriorityFee = `${priorityFee} Gwei`;
+    return {
+        ...transaction,
+        formattedPriorityFee: formattedPriorityFee,
+        priorityFee,
+        formattedTimestamp: new Date(
+            Number(timedata.timestamp) * 1000
+        ).toUTCString(),
+        timestamp: timedata.timestamp,
+    };
+};
+
+/**
+ *
+ * @param {import("@prisma/client").ContractAddressSettings} filter
+ * @returns
+ */
+const getTransactionsFromLastDayByContractAddress = async (filter) => {
+    const { contractAddress, days, minPriorityFee, maxPriorityFee } = filter;
+    const currentBlockNumber = await web3.eth.getBlockNumber();
+    const blockNumberFor24HoursAgo = currentBlockNumber - days * 250;
+    const transactions = await web3.eth.getPastLogs({
+        address: contractAddress,
+        fromBlock: blockNumberFor24HoursAgo,
+        toBlock: currentBlockNumber,
+    });
+    const uniqueTransactionHashes = [
+        ...new Set(transactions.map((obj) => obj.transactionHash)),
+    ];
+    let priorityFeeTransactions = [];
+    for (let i in uniqueTransactionHashes) {
+        priorityFeeTransactions.push(
+            await alchemyTransaction(uniqueTransactionHashes[i])
+        );
+    }
+    return priorityFeeTransactions.filter(
+        (elem) =>
+            elem.priorityFee <= maxPriorityFee &&
+            elem.priorityFee >= minPriorityFee
+    );
+};
+
 module.exports = {
     erc20TokenTransferEvents,
     getInternalTransaction,
     getLastTransaction,
     subscribe,
     getTokenInfo,
+    getTransactionsFromLastDayByContractAddress,
 };

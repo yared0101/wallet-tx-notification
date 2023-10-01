@@ -1,11 +1,16 @@
 const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
 const { session, prisma, markups, displayStrings } = require("../config");
 const { processPending } = require("../services");
-const { formatSendDetailChannel, reply } = require("../utils");
+const {
+    formatSendDetailChannel,
+    reply,
+    formatSendCAFilteredTxs,
+} = require("../utils");
 const {
     subscribe,
     getLastTransaction,
     getTokenInfo,
+    getTransactionsFromLastDayByContractAddress,
 } = require("../utils/cryptoFunctions");
 
 /**
@@ -103,6 +108,12 @@ module.exports = (bot) => {
                 ) {
                     const address = ctx.message.text;
                     await addTokenToFileBlackList(ctx, address);
+                } else if (
+                    session[ctx.chat.id]?.[
+                        displayStrings.priorityTrackNewSearch
+                    ]
+                ) {
+                    await addPriorityContract(ctx, ctx.message.text);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.fileCompareOptions.removeBlackListToken
@@ -271,6 +282,80 @@ const addWallet = async (ctx, text) => {
                 `wallet \n${nameTag}\nadded to list successfully`,
                 markups.homeMarkup
             );
+        } catch (e) {
+            console.log(e);
+            return;
+        }
+        //send to one of the commands
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {string} text
+ */
+const addPriorityContract = async (ctx, text) => {
+    let ses = session[ctx.chat.id][displayStrings.priorityTrackNewSearch];
+    if (!ses.contractAddress) {
+        ses.contractAddress = text;
+        session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
+        return await reply(ctx, "please send search hours");
+    } else if (!ses.days) {
+        const number = Number(text);
+        if (isNaN(number) || number > 120 || number < 1) {
+            return await reply(ctx, `please send number between 1 and 120`);
+        }
+        ses.days = number;
+        session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
+        return await reply(ctx, "please send min priority fee");
+    } else if (!ses.minPriorityFee && ses.minPriorityFee !== 0) {
+        const number = Number(text);
+        if (isNaN(number) || number < 0) {
+            return await reply(ctx, `please send number above 0`);
+        }
+        ses.minPriorityFee = number;
+        session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
+        return await reply(ctx, "please send max priority fee");
+    } else {
+        const number = Number(text);
+        if (isNaN(number) || number <= ses.minPriorityFee) {
+            return await reply(
+                ctx,
+                `please send number above ${ses.minPriorityFee}`
+            );
+        }
+        ses.maxPriorityFee = number;
+        session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
+        try {
+            await ctx.reply("Searching ...");
+            let data = await prisma.contractAddressSettings.findMany({
+                orderBy: { createdDate: "desc" },
+            });
+            data.shift();
+            data.shift();
+            if (data.length) {
+                await prisma.contractAddressSettings.deleteMany({
+                    where: {
+                        OR: data.map((elem) => ({ id: elem.id })),
+                    },
+                });
+            }
+            console.log("create", ses);
+            const filter = await prisma.contractAddressSettings.create({
+                data: {
+                    contractAddress: ses.contractAddress,
+                    maxPriorityFee: ses.maxPriorityFee,
+                    minPriorityFee: ses.minPriorityFee,
+                    days: ses.days,
+                },
+            });
+            const priorityFeeTransactions =
+                await getTransactionsFromLastDayByContractAddress(filter);
+            const sentMessage = formatSendCAFilteredTxs(
+                priorityFeeTransactions
+            );
+            await ctx.reply(sentMessage, { disable_web_page_preview: true });
         } catch (e) {
             console.log(e);
             return;
