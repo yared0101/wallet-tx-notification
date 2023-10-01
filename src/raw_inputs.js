@@ -303,8 +303,8 @@ const addPriorityContract = async (ctx, text) => {
         return await reply(ctx, "please send search hours");
     } else if (!ses.days) {
         const number = Number(text);
-        if (isNaN(number) || number > 120 || number < 1) {
-            return await reply(ctx, `please send number between 1 and 120`);
+        if (isNaN(number) || number < 1) {
+            return await reply(ctx, `please send number more than 1`);
         }
         ses.days = number;
         session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
