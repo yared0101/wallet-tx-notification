@@ -85,6 +85,7 @@ const displayStrings = {
         removeBlackListToken: "Remove Blacklist Address",
         listBlackListToken: "List Blacklist Addresses",
     },
+    addressFind: "Find Address",
 };
 const markups = {
     homeMarkup: {
@@ -106,8 +107,15 @@ const markups = {
                 [
                     { text: displayStrings.fileCompare },
                     { text: displayStrings.priorityTrack },
+                    { text: displayStrings.addressFind },
                 ],
             ],
+            resize_keyboard: true,
+        },
+    },
+    homeOptionMarkup: {
+        reply_markup: {
+            keyboard: [[{ text: displayStrings.home }]],
             resize_keyboard: true,
         },
     },
@@ -353,6 +361,71 @@ const markups = {
                 resize_keyboard: true,
                 keyboard: [defaultReply],
             },
+        };
+    },
+    /**
+     *
+     * @param {{address:string, balance: string}[]} addressList list of addresses and their balance
+     * @param {number} currentIndex index of the first in the list currently displayed, index starts from 0
+     * @returns
+     */
+    addressFindPrevNext: (addressList, currentIndex, pageSize = 10) => {
+        let reply_markup = {};
+        if (
+            addressList.length <= pageSize + currentIndex &&
+            currentIndex == 0
+        ) {
+            reply_markup = {};
+        } else if (
+            addressList.length <= pageSize + currentIndex &&
+            currentIndex > 0
+        ) {
+            reply_markup = {
+                resize_keyboard: true,
+                inline_keyboard: [
+                    [
+                        {
+                            text: `prev`,
+                            callback_data: `prev_addresses`,
+                        },
+                    ],
+                ],
+            };
+        } else if (
+            addressList.length > pageSize + currentIndex &&
+            currentIndex == 0
+        ) {
+            reply_markup = {
+                resize_keyboard: true,
+                inline_keyboard: [
+                    [
+                        {
+                            text: `next`,
+                            callback_data: `next_addresses`,
+                        },
+                    ],
+                ],
+            };
+        } else {
+            reply_markup = {
+                resize_keyboard: true,
+                inline_keyboard: [
+                    [
+                        {
+                            text: `prev`,
+                            callback_data: `prev_addresses`,
+                        },
+                        {
+                            text: `next`,
+                            callback_data: `next_addresses`,
+                        },
+                    ],
+                ],
+            };
+        }
+        return {
+            reply_markup,
+            parse_mode: "HTML",
         };
     },
 };

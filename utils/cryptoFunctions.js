@@ -2,6 +2,10 @@ const { prisma, url } = require("../config");
 const { default: axios } = require("axios");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 const web3 = createAlchemyWeb3(process.env.ALCHEMY_WEBSOCKET);
+const { BigQuery } = require("@google-cloud/bigquery");
+const path = require("path");
+const keyFilename = path.join(__dirname, "./big_query_credentials.json");
+const bigquery = new BigQuery({ keyFilename });
 // this variable is in memory as long as the server is running, which means we can store subscription object here
 // and then unsubscribe when new addresses are added, to subscribe to the new addresses too!
 // if server not running it means socket connection is lost so that's good enough
@@ -170,6 +174,54 @@ const getTransactionsFromLastDayByContractAddress = async (filter) => {
     );
 };
 
+/**
+ * finds address with ethereum balance for the incomplete address
+ * @param {string} addressQuery address to query, please make sure to add ... inplace of characters u don't know
+ */
+const queryEthereumAddresses = async (addressQuery) => {
+    try {
+        addressQuery = addressQuery.toLowerCase();
+        addressQuery = addressQuery.replace(/\.\.\./g, "%");
+        console.log({ addressQuery });
+        const query = `
+        SELECT *
+        FROM \`bigquery-public-data.crypto_ethereum.balances\`
+        WHERE address LIKE '${addressQuery}'
+        ORDER BY eth_balance DESC
+        LIMIT 50
+      `;
+
+        const options = {
+            query: query,
+            // location: 'US', // Change this to your desired location
+        };
+
+        const [job] = await bigquery.createQueryJob(options);
+        const [rows] = await job.getQueryResults();
+
+        // console.log("Query Results:");
+        let addressAndBalance = [];
+        rows.forEach((row) => {
+            const balanceArray = row.eth_balance.c;
+
+            // Convert the balance array to a string representation
+            const balanceString = balanceArray.join("");
+
+            // Parse the string as a decimal value
+            const etherBalance = parseFloat(
+                `${balanceString.slice(0, -18)}.${balanceString.slice(-18)}`
+            );
+            addressAndBalance.push({
+                address: row.address,
+                balance: etherBalance,
+            });
+        });
+        return addressAndBalance;
+    } catch (e) {
+        console.log(e);
+    }
+};
+
 module.exports = {
     erc20TokenTransferEvents,
     getInternalTransaction,
@@ -177,4 +229,5 @@ module.exports = {
     subscribe,
     getTokenInfo,
     getTransactionsFromLastDayByContractAddress,
+    queryEthereumAddresses,
 };

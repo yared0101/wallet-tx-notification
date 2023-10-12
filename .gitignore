@@ -3,3 +3,4 @@ node_modules
 .env
 trial.js
 trials.js
+utils/big_query_credentials.json

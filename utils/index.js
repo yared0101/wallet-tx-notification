@@ -34,6 +34,27 @@ const formatSendMatchingTokens = (list, matchingAccounts) => {
     }
     return sent || "No Wallets registered for listening";
 };
+
+/**
+ *
+ * @param {{address:string, balance: string}[]} list list of addresses and their balance
+ * @param {number} index index of the first in the list currently displayed, index starts from 0
+ * @returns
+ */
+const formatSendFoundAddresses = (list, index, pageSize = 10) => {
+    if (!list.length) {
+        return "No matching addresses found";
+    }
+    let sent = "";
+    for (let i = index; i < Math.min(index + pageSize, list.length); i++) {
+        const token = list[i];
+        sent += `${Number(i) + 1} - <code>${
+            token.address
+        }</code> - ${token.balance.toFixed(2)} Ether\n`;
+    }
+    return sent || "No Wallets registered for listening";
+};
+
 const formatSendCAFilteredTxs = (transactions) => {
     const url = process.env.MAIN_BASE_NET_URL;
     if (!transactions.length) {
@@ -333,4 +354,5 @@ module.exports = {
     formatSendMatchingTokens,
     reply,
     formatSendCAFilteredTxs,
+    formatSendFoundAddresses,
 };

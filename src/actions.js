@@ -1,9 +1,10 @@
 const { CHANNEL_BLACK_LIST_TYPE } = require("@prisma/client");
-const { session, prisma, markups } = require("../config");
+const { session, prisma, markups, displayStrings } = require("../config");
 const {
     formatSendDetailChannel,
     reply,
     formatSendCAFilteredTxs,
+    formatSendFoundAddresses,
 } = require("../utils");
 const {
     getTransactionsFromLastDayByContractAddress,
@@ -13,6 +14,72 @@ const {
  * @param {import("telegraf").Telegraf} bot
  */
 module.exports = (bot) => {
+    bot.action("next_addresses", async (ctx) => {
+        try {
+            const data = session[ctx.chat.id][displayStrings.addressFind];
+            if (!data) {
+                return await ctx.reply(
+                    "context has cleared, please search again"
+                );
+            }
+            const { list, currentIndex, pageSize } = data;
+            const updatedIndex = currentIndex + pageSize;
+            const sendData = formatSendFoundAddresses(
+                list,
+                updatedIndex,
+                pageSize
+            );
+            session[ctx.chat.id][displayStrings.addressFind].currentIndex =
+                updatedIndex;
+            await ctx.deleteMessage(
+                ctx.update.callback_query.message.message_id
+            );
+            await ctx.reply(
+                sendData,
+                markups.addressFindPrevNext(list, updatedIndex)
+            );
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        } finally {
+            try {
+                await ctx.answerCbQuery();
+            } catch {}
+        }
+    });
+    bot.action("prev_addresses", async (ctx) => {
+        try {
+            const data = session[ctx.chat.id][displayStrings.addressFind];
+            if (!data) {
+                return await ctx.reply(
+                    "context has cleared, please search again"
+                );
+            }
+            const { list, currentIndex, pageSize } = data;
+            const updatedIndex = Math.max(0, currentIndex - pageSize);
+            const sendData = formatSendFoundAddresses(
+                list,
+                updatedIndex,
+                pageSize
+            );
+            session[ctx.chat.id][displayStrings.addressFind].currentIndex =
+                updatedIndex;
+            await ctx.deleteMessage(
+                ctx.update.callback_query.message.message_id
+            );
+            await ctx.reply(
+                sendData,
+                markups.addressFindPrevNext(list, updatedIndex)
+            );
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        } finally {
+            try {
+                await ctx.answerCbQuery();
+            } catch {}
+        }
+    });
     bot.action(/selectChannel_.*/, async (ctx) => {
         try {
             const id = ctx.match[0].split("_")[1];

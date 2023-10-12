@@ -5,12 +5,14 @@ const {
     formatSendDetailChannel,
     reply,
     formatSendCAFilteredTxs,
+    formatSendFoundAddresses,
 } = require("../utils");
 const {
     subscribe,
     getLastTransaction,
     getTokenInfo,
     getTransactionsFromLastDayByContractAddress,
+    queryEthereumAddresses,
 } = require("../utils/cryptoFunctions");
 
 /**
@@ -84,6 +86,8 @@ module.exports = (bot) => {
                         );
                     }
                     await setMinimumEther(ctx, number);
+                } else if (session[ctx.chat.id]?.[displayStrings.addressFind]) {
+                    await addressFind(ctx, ctx.message.text);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.channelSelected.addWalletToChannel
@@ -597,6 +601,36 @@ const setMinimumEther = async (ctx, number) => {
             ctx,
             `minimum ether value has been ${number ? "set" : "unset"}`,
             markups.selectedChannel
+        );
+    } catch (e) {
+        console.log(e);
+        return await reply(ctx, "something went wrong");
+    }
+};
+
+/**
+ *
+ * @param {import('telegraf').Context} ctx
+ * @param {string} text
+ */
+const addressFind = async (ctx, text) => {
+    try {
+        ctx.reply("searching...");
+        const addressesList = await queryEthereumAddresses(text);
+        session[ctx.chat.id][displayStrings.addressFind] = {
+            list: addressesList,
+            currentIndex: 0,
+            pageSize: 10,
+        };
+        const sendData = formatSendFoundAddresses(addressesList, 0, 10);
+        await reply(
+            ctx,
+            sendData,
+            markups.addressFindPrevNext(addressesList, 0)
+        );
+        await ctx.reply(
+            "you can send again to search",
+            markups.homeOptionMarkup
         );
     } catch (e) {
         console.log(e);

@@ -438,6 +438,20 @@ module.exports = (bot) => {
             await reply(ctx, "something went wrong");
         }
     });
+    bot.hears(displayStrings.addressFind, async (ctx) => {
+        try {
+            session[ctx.chat.id] = {
+                [displayStrings.addressFind]: {},
+            };
+            await reply(
+                ctx,
+                `please send contract address, input ... for missing info \neg 0x23SF...39A`
+            );
+        } catch (e) {
+            console.log(e);
+            await reply(ctx, "something went wrong");
+        }
+    });
     bot.hears(displayStrings.fileCompareOptions.addFile, async (ctx) => {
         try {
             session[ctx.chat.id] = {
