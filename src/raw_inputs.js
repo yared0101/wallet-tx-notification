@@ -117,7 +117,7 @@ module.exports = (bot) => {
                         displayStrings.priorityTrackNewSearch
                     ]
                 ) {
-                    await addPriorityContract(ctx, ctx.message.text);
+                    await addPriorityContract(ctx, ctx.message.text, bot);
                 } else if (
                     session[ctx.chat.id]?.setting?.[
                         displayStrings.fileCompareOptions.removeBlackListToken
@@ -298,8 +298,9 @@ const addWallet = async (ctx, text) => {
  *
  * @param {import('telegraf').Context} ctx
  * @param {string} text
+ * @param {import("telegraf").Telegraf} bot
  */
-const addPriorityContract = async (ctx, text) => {
+const addPriorityContract = async (ctx, text, bot) => {
     let ses = session[ctx.chat.id][displayStrings.priorityTrackNewSearch];
     if (!ses.contractAddress) {
         ses.contractAddress = text;
@@ -332,7 +333,7 @@ const addPriorityContract = async (ctx, text) => {
         ses.maxPriorityFee = number;
         session[ctx.chat.id][displayStrings.priorityTrackNewSearch] = ses;
         try {
-            await ctx.reply("Searching ...");
+            const searchingMessage = await ctx.reply("Searching 0%");
             let data = await prisma.contractAddressSettings.findMany({
                 orderBy: { createdDate: "desc" },
             });
@@ -354,12 +355,31 @@ const addPriorityContract = async (ctx, text) => {
                     days: ses.days,
                 },
             });
-            const priorityFeeTransactions =
-                await getTransactionsFromLastDayByContractAddress(filter);
-            const sentMessage = formatSendCAFilteredTxs(
-                priorityFeeTransactions
+            getTransactionsFromLastDayByContractAddress(
+                filter,
+                async (priorityFeeTransactions) => {
+                    const sentMessage = formatSendCAFilteredTxs(
+                        priorityFeeTransactions
+                    );
+                    await bot.telegram.sendMessage(ctx.chat.id, sentMessage, {
+                        disable_web_page_preview: true,
+                    });
+                },
+                async () => {
+                    await bot.telegram.sendMessage(
+                        ctx.chat.id,
+                        "something went wrong"
+                    );
+                },
+                async (percentage) => {
+                    await bot.telegram.editMessageText(
+                        searchingMessage.chat.id,
+                        searchingMessage.message_id,
+                        undefined,
+                        `Searching ${percentage}%`
+                    );
+                }
             );
-            await ctx.reply(sentMessage, { disable_web_page_preview: true });
         } catch (e) {
             console.log(e);
             return;

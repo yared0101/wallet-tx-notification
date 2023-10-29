@@ -149,29 +149,53 @@ const alchemyTransaction = async (txHash) => {
  * @param {import("@prisma/client").ContractAddressSettings} filter
  * @returns
  */
-const getTransactionsFromLastDayByContractAddress = async (filter) => {
-    const { contractAddress, days, minPriorityFee, maxPriorityFee } = filter;
-    const currentBlockNumber = await web3.eth.getBlockNumber();
-    const blockNumberFor24HoursAgo = currentBlockNumber - days * 250;
-    const transactions = await web3.eth.getPastLogs({
-        address: contractAddress,
-        fromBlock: blockNumberFor24HoursAgo,
-        toBlock: currentBlockNumber,
-    });
-    const uniqueTransactionHashes = [
-        ...new Set(transactions.map((obj) => obj.transactionHash)),
-    ];
-    let priorityFeeTransactions = [];
-    for (let i in uniqueTransactionHashes) {
-        priorityFeeTransactions.push(
-            await alchemyTransaction(uniqueTransactionHashes[i])
+const getTransactionsFromLastDayByContractAddress = async (
+    filter,
+    callback,
+    errorCallback,
+    updatePercentage
+) => {
+    try {
+        const { contractAddress, days, minPriorityFee, maxPriorityFee } =
+            filter;
+        const currentBlockNumber = await web3.eth.getBlockNumber();
+        const blockNumberFor24HoursAgo = currentBlockNumber - days * 250;
+        const transactions = await web3.eth.getPastLogs({
+            address: contractAddress,
+            fromBlock: blockNumberFor24HoursAgo,
+            toBlock: currentBlockNumber,
+        });
+        const uniqueTransactionHashes = [
+            ...new Set(transactions.map((obj) => obj.transactionHash)),
+        ];
+        let priorityFeeTransactions = [];
+        for (let i in uniqueTransactionHashes) {
+            let processed = Number(i);
+            if (processed && processed % 50 === 0) {
+                const percentage =
+                    (processed * 100) / uniqueTransactionHashes.length;
+                console.log({
+                    percentage,
+                    processed,
+                    total: uniqueTransactionHashes.length,
+                });
+                await updatePercentage(percentage.toFixed(0));
+            }
+            priorityFeeTransactions.push(
+                await alchemyTransaction(uniqueTransactionHashes[i])
+            );
+        }
+        await callback(
+            priorityFeeTransactions.filter(
+                (elem) =>
+                    elem.priorityFee <= maxPriorityFee &&
+                    elem.priorityFee >= minPriorityFee
+            )
         );
+    } catch (e) {
+        console.log(e);
+        errorCallback();
     }
-    return priorityFeeTransactions.filter(
-        (elem) =>
-            elem.priorityFee <= maxPriorityFee &&
-            elem.priorityFee >= minPriorityFee
-    );
 };
 
 /**
