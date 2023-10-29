@@ -338,7 +338,7 @@ const markups = {
                     {
                         text: `${elem.contractAddress.substring(0, 4)}..., ${
                             elem.days
-                        } days, ${elem.minPriorityFee} - ${
+                        } hours, ${elem.minPriorityFee} - ${
                             elem.maxPriorityFee
                         }`,
                         callback_data: `PRIORITY_${elem.id}`,
