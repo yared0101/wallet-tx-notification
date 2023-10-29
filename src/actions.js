@@ -108,7 +108,7 @@ module.exports = (bot) => {
     bot.action(/PRIORITY_.*/, async (ctx) => {
         try {
             const id = ctx.match[0].split("_")[1];
-            await ctx.reply("Searching ...");
+            const searchingMessage = await ctx.reply("Searching ...");
             const filter = await prisma.contractAddressSettings.findUnique({
                 where: { id: Number(id) },
             });
@@ -117,14 +117,31 @@ module.exports = (bot) => {
                     "couldn't find the selected filter, try adding a new one"
                 );
             }
-            const priorityFeeTransactions =
-                await getTransactionsFromLastDayByContractAddress(filter);
-            const sentMessage = formatSendCAFilteredTxs(
-                priorityFeeTransactions
+            getTransactionsFromLastDayByContractAddress(
+                filter,
+                async (priorityFeeTransactions) => {
+                    const sentMessage = formatSendCAFilteredTxs(
+                        priorityFeeTransactions
+                    );
+                    await bot.telegram.sendMessage(ctx.chat.id, sentMessage, {
+                        disable_web_page_preview: true,
+                    });
+                },
+                async () => {
+                    await bot.telegram.sendMessage(
+                        ctx.chat.id,
+                        "something went wrong"
+                    );
+                },
+                async (percentage) => {
+                    await bot.telegram.editMessageText(
+                        searchingMessage.chat.id,
+                        searchingMessage.message_id,
+                        undefined,
+                        `Searching ${percentage}%`
+                    );
+                }
             );
-            return await ctx.reply(sentMessage, {
-                disable_web_page_preview: true,
-            });
         } catch (e) {
             console.log(e);
             await reply(ctx, "something went wrong");
