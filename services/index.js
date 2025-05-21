@@ -165,7 +165,7 @@ const processPending = async (txn) => {
  * @param {import('@prisma/client').Account} wallet
  * @returns
  */
-const processCompleted = async (txn, wallet) => {
+const processCompleted = async (txn, wallet, mev_protected = false) => {
     logger.info({
         type: "COMPLETE",
         trace: "/services/index.js - line number 171",
@@ -265,7 +265,8 @@ const processCompleted = async (txn, wallet) => {
         tokenData,
         isApprove,
         isSwap,
-        isSell
+        isSell,
+        mev_protected
     );
     if (!message) {
         console.log({
@@ -358,6 +359,130 @@ const processCompleted = async (txn, wallet) => {
         }
     }
 };
+
+/**
+ * gets new completed transaction webhook, this is purely used for transactions not early registered as pending from mev protection issue
+ * if tx was pending, leave it alone, else send to the processCompleted function
+ * {
+  removed: false,
+  transaction: {
+    blockNumber: '0x7fcf54',
+    blockHash: '0x43d166425cb16989a3e19a7c1c19dbff1acd1cd1597a906a9bb01904e80a9193',
+    from: '0xc5873c20f52755ee6e7ceb5b5de2ce2c57ecdb74',
+    to: '0x628254f7513e02865ad6cd4a407dea5b5da55012',
+    input: '0x',
+    gas: '0x5208',
+    gasPrice: '0x59688468',
+    nonce: '0x2',
+    transactionIndex: '0x10',
+    value: '0x38d7ea4c68000',
+    type: '0x2',
+    v: '0x1',
+    r: '0x42b7db7f9d282cbb4a33acae3c1b4f181aaae8fdb4fc1b7a46c285360fbd370d',
+    s: '0x195f5dda78f843ebdd4cf358612e60268ffed79dbfa50a253132dc52af05f10d',
+    hash: '0x8c7c17a5b37fd447ebd42a85deaff6549bd7ecd44a4211c54766fbd73aaba6ca',
+    chainId: '0xaa36a7',
+    maxPriorityFeePerGas: '0x59682f00',
+    maxFeePerGas: '0x59689cda',
+    yParity: '0x1',
+    accessList: []
+  }
+}
+    * @param {{
+        removed: boolean,
+        transaction: {
+            blockNumber: string,
+            blockHash: string,
+            from: string,
+            to: string,
+            input: string,
+            gas: string,
+            gasPrice: string,
+            nonce: string,
+            transactionIndex: string,
+            value: string,
+            type: string,
+            v: string,
+            r: string,
+            s: string,
+            hash: string,
+            chainId: string,
+            maxPriorityFeePerGas: string,
+            maxFeePerGas: string,
+            yParity: string,
+            accessList: Array<string>,
+        },
+    }} data
+ */
+const processCompletedFromSubscription = async (data, toOrFrom) => {
+    const txn = data.transaction;
+    const hash = txn.hash;
+    const alreadyTx = await prisma.pendingTransactions.findFirst({
+        where: { transactionHash: { equals: hash, mode: "insensitive" } },
+    });
+    logger.info({
+        type: "COMPLETED_FROM_SUBSCRIPTION",
+        trace: "/services/index.js - line number 374",
+        found: hash,
+        alreadyTx,
+    });
+    if (alreadyTx) {
+        // wasn't mev protected, so don't process it
+        console.log("wasn't mev protected, so don't process it");
+        return;
+    }
+    const wasPendingButDeleted =
+        await prisma.deletedPendingTransactions.findFirst({
+            where: { transactionHash: { equals: hash, mode: "insensitive" } },
+        });
+    if (wasPendingButDeleted) {
+        // wasn't mev protected, was just already found by etherscan and deleted
+        console.log(
+            "wasn't mev protected, was just already found by etherscan"
+        );
+        return;
+    }
+    if (toOrFrom === "to") {
+        const wallet = await prisma.account.findFirst({
+            where: {
+                account: {
+                    equals: txn.to,
+                    mode: "insensitive",
+                },
+            },
+        });
+        if (!wallet) {
+            logger.info({
+                errorMessage:
+                    "wallet not found for completed from subscription(to)",
+                txn,
+                wallet,
+            });
+            return;
+        }
+        return processCompleted(txn, wallet, true);
+    } else {
+        const wallet = await prisma.account.findFirst({
+            where: {
+                account: {
+                    equals: txn.from,
+                    mode: "insensitive",
+                },
+            },
+        });
+        if (!wallet) {
+            logger.info({
+                errorMessage:
+                    "wallet not found for completed from subscription(from)",
+                txn,
+                wallet,
+            });
+            return;
+        }
+        return processCompleted(txn, wallet, true);
+    }
+};
+
 /**
  * gets all wallets with pending tx and checks if transaction is complete,
  * and if complete it will send it to the appropriate page and deletes the pending tx
@@ -480,6 +605,15 @@ const intervalFunction = async () => {
                         transactionHash: lastTransaction.hash,
                     },
                 });
+                try {
+                    await prisma.deletedPendingTransactions.create({
+                        data: {
+                            transactionHash: lastTransaction.hash,
+                        },
+                    });
+                } catch (e) {
+                    // do nothing tbh
+                }
             }
 
             // break;
@@ -493,6 +627,7 @@ module.exports = {
     processCompleted,
     processPending,
     intervalFunction,
+    processCompletedFromSubscription,
 };
 
 // const trans = {

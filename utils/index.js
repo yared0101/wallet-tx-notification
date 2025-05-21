@@ -226,7 +226,8 @@ const formatSendComplete = (
     tokenData,
     isApprove,
     isSwap,
-    isSell
+    isSell,
+    isMevProtected = false
 ) => {
     const isFromTransfer =
         txn.from.toLowerCase() === wallet.account.toLowerCase();
@@ -296,7 +297,9 @@ const formatSendComplete = (
         }
     }
     sentMessage += `${url}/tx/${txn.hash}`;
-
+    if (isMevProtected) {
+        sentMessage += `\n\nMEV Protected Transaction 🟣`;
+    }
     return sentMessage;
 };
 /**

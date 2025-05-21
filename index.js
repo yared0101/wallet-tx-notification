@@ -1,11 +1,16 @@
 require("dotenv").config();
 const { defaultTime, bot, prisma } = require("./config");
-const { intervalFunction, processPending } = require("./services");
-const { subscribe } = require("./utils/cryptoFunctions");
+const {
+    intervalFunction,
+    processPending,
+    processCompletedFromSubscription,
+} = require("./services");
+const { subscribe, subscribeComplete } = require("./utils/cryptoFunctions");
 const main = async () => {
     const configData = await prisma.time.findFirst();
     const setTime = configData?.totalTime;
     await subscribe(processPending);
+    await subscribeComplete(processCompletedFromSubscription);
     setInterval(intervalFunction, (setTime || defaultTime) * 1000);
 };
 main();

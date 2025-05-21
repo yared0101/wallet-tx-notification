@@ -6,10 +6,19 @@ const { BigQuery } = require("@google-cloud/bigquery");
 const path = require("path");
 const keyFilename = path.join(__dirname, "./big_query_credentials.json");
 const bigquery = new BigQuery({ keyFilename });
+
+const { Alchemy, Network, AlchemySubscription } = require("alchemy-sdk");
+const settings = {
+    apiKey: process.env.ALCHEMY_APIKEY, // Replace with your Alchemy API Key
+    network: Network.ETH_SEPOLIA, // Replace with your network
+};
+const alchemy = new Alchemy(settings);
+
 // this variable is in memory as long as the server is running, which means we can store subscription object here
 // and then unsubscribe when new addresses are added, to subscribe to the new addresses too!
 // if server not running it means socket connection is lost so that's good enough
 var subscription = [];
+var completeSubscription = [];
 const apiKey = process.env.API_KEY;
 /**
  * sends in last or given transaction data from given wallet address
@@ -117,6 +126,49 @@ const subscribe = async (processPending) => {
         console.log("subscribe", e);
     }
 };
+
+const subscribeComplete = async (processCompletedFromSubscription) => {
+    try {
+        // await completeSubscription?.[0]?.unsubscribe();
+        // await completeSubscription?.[1]?.unsubscribe();
+        const wallets = await prisma.account.findMany();
+        if (wallets.length) {
+            // completeSubscription[0] = web3.eth
+            //     .subscribe("alchemy_minedTransactions", {
+            //         fromAddress: wallets.map((elem) => elem.account),
+            //         hashesOnly: false,
+            //         includeRemoved: false,
+            //     })
+            //     .on("data", (data) => {
+            //         processCompletedFromSubscription(data, "from");
+            //     });
+            completeSubscription[0] = alchemy.ws.on(
+                {
+                    method: AlchemySubscription.MINED_TRANSACTIONS,
+                    addresses: wallets.map((elem) => ({ from: elem.account })),
+                    includeRemoved: false,
+                    hashesOnly: false,
+                },
+                (tx) => processCompletedFromSubscription(tx, "from")
+            );
+            completeSubscription[1] = alchemy.ws.on(
+                {
+                    method: AlchemySubscription.MINED_TRANSACTIONS,
+                    addresses: wallets.map((elem) => ({ to: elem.account })),
+                    includeRemoved: false,
+                    hashesOnly: false,
+                },
+                (tx) => processCompletedFromSubscription(tx, "to")
+            );
+            console.log("in", "subscription");
+        } else {
+            console.log("out", wallets);
+        }
+    } catch (e) {
+        console.log("subscribe completed ", e);
+    }
+};
+
 const getTokenInfo = async (contractAddress) => {
     // const contractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     try {
@@ -254,4 +306,5 @@ module.exports = {
     getTokenInfo,
     getTransactionsFromLastDayByContractAddress,
     queryEthereumAddresses,
+    subscribeComplete,
 };

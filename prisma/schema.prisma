@@ -31,6 +31,11 @@ model PendingTransactions {
   @@unique([transactionHash, accountId])
 }
 
+model DeletedPendingTransactions {
+  id              Int    @id @default(autoincrement())
+  transactionHash String @unique
+}
+
 model BlackListContracts {
   id            Int      @id @default(autoincrement())
   contractId    String
