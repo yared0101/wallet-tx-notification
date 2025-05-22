@@ -10,7 +10,7 @@ const bigquery = new BigQuery({ keyFilename });
 const { Alchemy, Network, AlchemySubscription } = require("alchemy-sdk");
 const settings = {
     apiKey: process.env.ALCHEMY_APIKEY, // Replace with your Alchemy API Key
-    network: Network.ETH_SEPOLIA, // Replace with your network
+    network: Network.ETH_MAINNET, // Replace with your network
 };
 const alchemy = new Alchemy(settings);
 
