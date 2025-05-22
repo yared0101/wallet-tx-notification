@@ -1,7 +1,8 @@
 const { prisma, url } = require("../config");
 const { default: axios } = require("axios");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const web3 = createAlchemyWeb3(process.env.ALCHEMY_WEBSOCKET);
+const web3 = createAlchemyWeb3(process.env.ALCHEMY_HTTPS);
+const web3Wss = createAlchemyWeb3(process.env.ALCHEMY_WEBSOCKET);
 const { BigQuery } = require("@google-cloud/bigquery");
 const path = require("path");
 const keyFilename = path.join(__dirname, "./big_query_credentials.json");
@@ -102,7 +103,7 @@ const subscribe = async (processPending) => {
         await subscription?.[1]?.unsubscribe();
         const wallets = await prisma.account.findMany();
         if (wallets.length) {
-            subscription[0] = web3.eth
+            subscription[0] = web3Wss.eth
                 .subscribe("alchemy_pendingTransactions", {
                     fromAddress: wallets.map((elem) => elem.account),
                     hashesOnly: false,
@@ -110,7 +111,7 @@ const subscribe = async (processPending) => {
                 .on("data", (data) => {
                     processPending(data);
                 });
-            subscription[1] = web3.eth
+            subscription[1] = web3Wss.eth
                 .subscribe("alchemy_pendingTransactions", {
                     toAddress: wallets.map((elem) => elem.account),
                     hashesOnly: false,
