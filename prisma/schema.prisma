@@ -27,6 +27,7 @@ model PendingTransactions {
   telegramSentMessageId Int
   accountId             Int
   processing            Int     @default(0)
+  mevProtected          Boolean @default(false)
 
   @@unique([transactionHash, accountId])
 }

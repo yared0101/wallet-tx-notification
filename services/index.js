@@ -460,7 +460,23 @@ const processCompletedFromSubscription = async (data, toOrFrom) => {
             });
             return;
         }
-        return processCompleted(txn, wallet, true);
+        // const lastTransaction = await getLastTransaction(
+        //     wallet.account,
+        //     txn.hash.toLowerCase()
+        // );
+        // return processCompleted(lastTransaction, wallet, true);
+        await prisma.account.update({
+            where: { id: wallet.id },
+            data: {
+                pendingTransactions: {
+                    create: {
+                        transactionHash: txn.hash,
+                        telegramSentMessageId: 1,
+                        mevProtected: true,
+                    },
+                },
+            },
+        });
     } else {
         const wallet = await prisma.account.findFirst({
             where: {
@@ -479,7 +495,18 @@ const processCompletedFromSubscription = async (data, toOrFrom) => {
             });
             return;
         }
-        return processCompleted(txn, wallet, true);
+        await prisma.account.update({
+            where: { id: wallet.id },
+            data: {
+                pendingTransactions: {
+                    create: {
+                        transactionHash: txn.hash,
+                        telegramSentMessageId: 1,
+                        mevProtected: true,
+                    },
+                },
+            },
+        });
     }
 };
 
@@ -575,7 +602,8 @@ const intervalFunction = async () => {
             if (lastTransaction?.isError === "0") {
                 messageConstructed = await processCompleted(
                     lastTransaction,
-                    wallet
+                    wallet,
+                    firstPendingTransaciton.mevProtected
                 );
             }
             //if message not constructed set the value to 0 cause next interval should reprocess, if constructed it's deleted so no worries
