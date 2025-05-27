@@ -171,7 +171,6 @@ const processCompleted = async (txn, wallet, mev_protected = false) => {
         trace: "/services/index.js - line number 171",
         txn,
     });
-    const isSell = !Boolean(parseInt(txn.value));
     let isSwap = !(txn.input === "" || txn.input === "0x");
     const isApprove = txn.functionName?.startsWith("approve") ?? false;
     if (!isSwap) {
@@ -185,8 +184,14 @@ const processCompleted = async (txn, wallet, mev_protected = false) => {
                 ? { outGoingTransfer: true }
                 : { incomingTransfer: true };
     }
-    const extraData =
-        isSell && (await getInternalTransaction(txn.hash, wallet.account));
+    // keep the previous 0/non 0
+    let isSell = !Boolean(parseInt(txn.value));
+    const extraData = await getInternalTransaction(txn.hash, wallet.account);
+    if (!extraData) {
+        // if there is no extra data then it must mean it's a buy tx
+        isSell = false;
+    }
+
     let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
     if (isApprove) {
         filter = { sendApprove: true };
