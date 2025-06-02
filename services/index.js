@@ -176,7 +176,11 @@ const processCompleted = async (txn, wallet, mev_protected = false) => {
     if (!isSwap) {
         txn.input = "";
     }
-    console.log({ input10: txn.input?.substring(0, 10), isSwap });
+    console.log({
+        input10: txn.input?.substring(0, 10),
+        isSwap,
+        txn10: txn.hash?.substring(0, 10),
+    });
     let transferFilter = {};
     if (!isSwap) {
         transferFilter =

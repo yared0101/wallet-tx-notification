@@ -273,7 +273,12 @@ const formatSendComplete = (
             }\n`;
             tokenData = tokenData[0];
             const etherVal = Number(toDecimalComplete(sellValue || txn.value));
-            if (!etherVal) return false;
+            if (!etherVal) {
+                console.log(
+                    "no ether value for tx ( still continuing )",
+                    txn.hash
+                );
+            }
             if (isSell) {
                 sentMessage += `Swap ${realval(tokenData)} ${
                     tokenData.tokenSymbol
