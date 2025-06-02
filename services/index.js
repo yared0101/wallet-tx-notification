@@ -246,7 +246,7 @@ const processCompleted = async (txn, wallet, mev_protected = false) => {
     if (!tokenData.length) {
         isSwap = false;
     }
-    console.log(tokenData);
+    console.log(tokenData, txn.hash);
     // const hasTokenData = tokenData ? (tokenData.length ? true : false) : false;
     // if (isSwap && !isSell && !hasTokenData) {
     //     logger.info({
