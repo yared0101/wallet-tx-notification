@@ -55,22 +55,86 @@ const getLastTransaction = async (address, transactionHash) => {
  * @param {string} hash
  * @returns
  */
-const erc20TokenTransferEvents = async (address, hash) => {
+const erc20TokenTransferEvents = async (account, hash) => {
     try {
-        const data = await axios.get(
-            `${url}/api?module=account&action=tokentx&address=${address}&page=1&offset=0&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`
+        // const data = await axios.get(
+        //     `${url}/api?module=account&action=tokentx&address=${address}&page=1&offset=0&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`
+        // );
+        // const transferredToken = data.data.result.filter(
+        //     (elem) => elem.hash.toLowerCase() === hash.toLowerCase()
+        // );
+        // return [
+        //     transferredToken.find(
+        //         (elem) => elem.from.toLowerCase() === address.toLowerCase()
+        //     ),
+        //     transferredToken.find(
+        //         (elem) => elem.to.toLowerCase() === address.toLowerCase()
+        //     ),
+        // ].filter((elem) => elem);
+        // what's needed from old
+        // hash, from, contractAddress, to, value, tokenSymbol, tokenDecimal
+        /// we have
+        /**
+         * {
+    blockNum: '0x1593e47',
+    uniqueId: '0x75e8696ba854fb497299c8a73986c0a4759ce0b47bbf06250a1744de0bc1d61b:log:284',
+    hash: '0x75e8696ba854fb497299c8a73986c0a4759ce0b47bbf06250a1744de0bc1d61b',
+    from: '0x66a9893cc07d91d95644aedd05d03f95e1dba8af',
+    to: '0x76f60abb5a4cfa34fe97aff07795147983ef71bb',
+    value: 33175.47415189512,
+    erc721TokenId: null,
+    erc1155Metadata: null,
+    tokenId: null,
+    asset: 'APES',
+    category: 'erc20',
+    rawContract: {
+      value: '0x07067230d1f40e429dae',
+      address: '0x09675e24ca1eb06023451ac8088eca1040f47585',
+      decimal: '0x12'
+    }
+  }
+    instead
+         */
+        const response = await alchemy.core.getAssetTransfers({
+            fromBlock: "0x0",
+            toBlock: "latest",
+            excludeZeroValue: true,
+            category: ["erc20"],
+            // fromAddress: account,
+            toAddress: account,
+        });
+
+        // Filtering by hash within the response is more robust as getAssetTransfers doesn't
+        // directly filter by transaction hash in the request itself.
+        const erc20Transfers1 = response.transfers.filter(
+            (transfer) => transfer.hash.toLowerCase() === hash.toLowerCase()
         );
-        const transferredToken = data.data.result.filter(
-            (elem) => elem.hash.toLowerCase() === hash.toLowerCase()
+        const response2 = await alchemy.core.getAssetTransfers({
+            fromBlock: "0x0",
+            toBlock: "latest",
+            excludeZeroValue: true,
+            category: ["erc20"],
+            fromAddress: account,
+            // toAddress: account,
+        });
+        const erc20Transfers2 = response2.transfers.filter(
+            (transfer) => transfer.hash.toLowerCase() === hash.toLowerCase()
         );
-        return [
-            transferredToken.find(
-                (elem) => elem.from.toLowerCase() === address.toLowerCase()
-            ),
-            transferredToken.find(
-                (elem) => elem.to.toLowerCase() === address.toLowerCase()
-            ),
-        ].filter((elem) => elem);
+        const erc20Transfers = [...erc20Transfers1, ...erc20Transfers2];
+        if (erc20Transfers.length) {
+            return erc20Transfers.map((transfer) => ({
+                ...transfer,
+                hash: transfer.hash,
+                from: transfer.from,
+                contractAddress: transfer.rawContract?.address,
+                to: transfer.to,
+                value: transfer.value,
+                tokenSymbol: transfer.asset,
+                tokenDecimal: 0,
+            }));
+        } else {
+            return [];
+        }
     } catch (e) {
         console.log(e);
         return undefined;
