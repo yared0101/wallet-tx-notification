@@ -195,6 +195,11 @@ const processCompleted = async (txn, wallet, mev_protected = false) => {
         // if there is no extra data then it must mean it's a buy tx
         isSell = false;
     }
+    console.log({
+        txn10: txn.input?.substring(0, 10),
+        extraData: extraData,
+        isSell: isSell,
+    });
 
     let filter = isSell ? { sendSellTx: true } : { sendBuyTx: true };
     if (isApprove) {
