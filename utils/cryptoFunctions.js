@@ -121,8 +121,40 @@ const erc20TokenTransferEvents = async (account, hash) => {
             (transfer) => transfer.hash.toLowerCase() === hash.toLowerCase()
         );
         const erc20Transfers = [...erc20Transfers1, ...erc20Transfers2];
-        if (erc20Transfers.length) {
-            return erc20Transfers.map((transfer) => ({
+        // if the transfers have the same tokenSymbol, or .asset keep the large one
+        let newErc20Transfers = [];
+        const seenTokens = new Set();
+        for (const transfer of erc20Transfers) {
+            if (!seenTokens.has(transfer.asset)) {
+                seenTokens.add(transfer.asset);
+                newErc20Transfers.push(transfer);
+            } else {
+                const existingTransfer = newErc20Transfers.find(
+                    (t) => t.asset === transfer.asset
+                );
+                if (
+                    existingTransfer &&
+                    existingTransfer.value < transfer.value
+                ) {
+                    newErc20Transfers = newErc20Transfers.filter(
+                        (t) => t.asset !== transfer.asset
+                    );
+                    newErc20Transfers.push(transfer);
+                }
+            }
+        }
+        // if value.to= account, then sort it below
+        newErc20Transfers.sort((a, b) => {
+            if (a.to.toLowerCase() === account.toLowerCase()) {
+                return 1; // a goes to the end
+            } else if (b.to.toLowerCase() === account.toLowerCase()) {
+                return -1; // b goes to the end
+            } else {
+                return 0; // keep original order
+            }
+        });
+        if (newErc20Transfers.length) {
+            return newErc20Transfers.map((transfer) => ({
                 ...transfer,
                 hash: transfer.hash,
                 from: transfer.from,
