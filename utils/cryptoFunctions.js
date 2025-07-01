@@ -181,13 +181,29 @@ const erc20TokenTransferEvents = async (account, hash) => {
 const getInternalTransaction = async (transaction, targetAcc) => {
     // return undefined;
     try {
-        const data = await axios.get(
-            `${url}/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`
+        // const data = await axios.get(
+        //     `${url}/api?module=account&action=txlistinternal&txhash=${transaction}&apikey=${apiKey}`
+        // );
+        // let returnable = data.data.result.find(
+        //     (elem) => elem.to.toLowerCase() === targetAcc.toLowerCase()
+        // );
+        // return returnable;
+        const response = await alchemy.core.getAssetTransfers({
+            fromBlock: "0x0",
+            toBlock: "latest",
+            category: ["internal"],
+            excludeZeroValue: true,
+            toAddress: targetAcc,
+        });
+        // filter by transaction
+        let internalTransfer = response.transfers.find(
+            (transfer) => transfer.hash === transaction
         );
-        let returnable = data.data.result.find(
-            (elem) => elem.to.toLowerCase() === targetAcc.toLowerCase()
-        );
-        return returnable;
+        if (internalTransfer) {
+            // multiply value by 1e18 to get the correct value
+            internalTransfer.value = internalTransfer.value * 1e18;
+        }
+        return internalTransfer;
     } catch (e) {
         console.log("internal out", e);
         return undefined;
