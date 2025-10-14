@@ -21,7 +21,12 @@ const {
  */
 module.exports = (bot) => {
     bot.use(async (ctx) => {
-        if (ctx.message && ctx.message.text) {
+        if (
+            ctx.message &&
+            ctx.message.text &&
+            (ctx.chat.id == Number(process.env.USER_ID) ||
+                ctx.chat.id == Number(process.env.USER_ID_2))
+        ) {
             try {
                 if (session[ctx.chat.id]?.[displayStrings.addChannel]) {
                     await addChannel(ctx);
