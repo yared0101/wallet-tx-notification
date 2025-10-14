@@ -153,6 +153,7 @@ module.exports = (bot) => {
         }
     );
     bot.hears(displayStrings.channelSelected.setMinimumEther, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         if (!session[ctx.chat.id]?.selectedChannelId) {
             await reply(
                 ctx,
@@ -171,6 +172,7 @@ module.exports = (bot) => {
         } catch (e) {}
     });
     bot.hears(displayStrings.channelSelected.editChannel, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         if (!session[ctx.chat.id]?.selectedChannelId) {
             await reply(
                 ctx,
@@ -184,6 +186,7 @@ module.exports = (bot) => {
         await reply(ctx, "please send channel name");
     });
     bot.hears(displayStrings.channelSelected.channelSettings, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         if (!session[ctx.chat.id]?.selectedChannelId) {
             await reply(
                 ctx,
@@ -271,6 +274,7 @@ module.exports = (bot) => {
         }
     );
     bot.hears(displayStrings.channelSelected.addBlackListToken, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         if (!session[ctx.chat.id]?.selectedChannelId) {
             await reply(
                 ctx,
@@ -416,6 +420,7 @@ module.exports = (bot) => {
     );
     bot.hears(displayStrings.fileCompare, async (ctx) => {
         try {
+            if (!isAllowed(ctx)) return;
             session[ctx.chat.id] = {
                 fileCompare: {
                     files: [],
@@ -434,6 +439,7 @@ module.exports = (bot) => {
     });
     bot.hears(displayStrings.priorityTrack, async (ctx) => {
         try {
+            if (!isAllowed(ctx)) return;
             const histories = await prisma.contractAddressSettings.findMany({
                 orderBy: { createdDate: "desc" },
             });
@@ -453,6 +459,7 @@ module.exports = (bot) => {
     });
     bot.hears(displayStrings.priorityTrackNewSearch, async (ctx) => {
         try {
+            if (!isAllowed(ctx)) return;
             session[ctx.chat.id] = {
                 [displayStrings.priorityTrackNewSearch]: {},
             };
@@ -463,6 +470,7 @@ module.exports = (bot) => {
         }
     });
     bot.hears(displayStrings.addressFind, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         try {
             session[ctx.chat.id] = {
                 [displayStrings.addressFind]: {},
@@ -478,6 +486,7 @@ module.exports = (bot) => {
     });
     bot.hears(displayStrings.fileCompareOptions.addFile, async (ctx) => {
         try {
+            if (!isAllowed(ctx)) return;
             session[ctx.chat.id] = {
                 fileCompare: {
                     // files: ["BQACAgQAAxkBAAIrbmP893bHX5gAARML-VbADduoBaWZ2gAC1g8AAlmU4VOmX2ZF6uCqcS4E","BQACAgQAAxkBAAIrb2P893bnJNRPMnJDyC8RdA7c0uANAAIMDQACMdZwUxVvDJkNsCB1LgQ",],
