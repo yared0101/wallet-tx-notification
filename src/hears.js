@@ -12,11 +12,21 @@ const {
  * @param {import("telegraf").Composer} bot
  */
 module.exports = (bot) => {
+    const allowedUsers = [
+        Number(process.env.USER_ID),
+        Number(process.env.USER_ID_2),
+    ];
+    function isAllowed(ctx) {
+        return allowedUsers.includes(ctx.chat.id);
+    }
+
     bot.hears(displayStrings.home, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         session[ctx.chat.id] = {};
         await reply(ctx, "Choose one of the buttons", markups.homeMarkup);
     });
     bot.hears(displayStrings.addChannel, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         session[ctx.chat.id] = { [displayStrings.addChannel]: {} };
         await reply(
             ctx,
@@ -24,10 +34,12 @@ module.exports = (bot) => {
         );
     });
     bot.hears(displayStrings.addWallet, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         session[ctx.chat.id] = { [displayStrings.addWallet]: {} };
         await reply(ctx, "please send wallet address");
     });
     bot.hears(displayStrings.removeWallet, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         try {
             const wallets = await prisma.account.findMany({
                 orderBy: { id: "asc" },
@@ -42,6 +54,7 @@ module.exports = (bot) => {
         } catch (e) {}
     });
     bot.hears(displayStrings.removeChannel, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         try {
             const channels = await prisma.channel.findMany({
                 orderBy: { id: "asc" },
@@ -56,12 +69,15 @@ module.exports = (bot) => {
         } catch (e) {}
     });
     bot.hears(displayStrings.listWallets, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         await listWallets(ctx);
     });
     bot.hears(displayStrings.listChannels, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         await listChannels(ctx);
     });
     bot.hears(displayStrings.selectChannel, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         await selectChannel(ctx);
     });
     bot.hears(
