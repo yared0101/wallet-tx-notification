@@ -83,6 +83,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.addWalletToChannel,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.selectedChannelId) {
                 await reply(
                     ctx,
@@ -115,6 +116,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.removeWalletFromChannel,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.selectedChannelId) {
                 await reply(
                     ctx,
@@ -203,6 +205,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.listWalletsInChannel,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
                     await reply(
@@ -236,6 +239,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.viewBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
                     await reply(
@@ -284,6 +288,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.removeBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.selectedChannelId) {
                 await reply(
                     ctx,
@@ -321,6 +326,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.viewBuyBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             try {
                 if (!session[ctx.chat.id]?.selectedChannelId) {
                     await reply(
@@ -354,6 +360,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.addBuyBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.selectedChannelId) {
                 await reply(
                     ctx,
@@ -372,6 +379,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.channelSelected.removeBuyBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.selectedChannelId) {
                 await reply(
                     ctx,
@@ -490,6 +498,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.fileCompareOptions.addBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.fileCompare) {
                 return await reply(
                     ctx,
@@ -508,6 +517,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.fileCompareOptions.listBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             try {
                 if (!session[ctx.chat.id]?.fileCompare) {
                     return await reply(
@@ -531,6 +541,7 @@ module.exports = (bot) => {
     bot.hears(
         displayStrings.fileCompareOptions.removeBlackListToken,
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             if (!session[ctx.chat.id]?.fileCompare) {
                 return await reply(
                     ctx,
@@ -563,6 +574,7 @@ module.exports = (bot) => {
             displayStrings.fileCompareOptions.displayBothResults,
         ],
         async (ctx) => {
+            if (!isAllowed(ctx)) return;
             try {
                 if (!session[ctx.chat.id]?.fileCompare) {
                     return await reply(
@@ -630,6 +642,7 @@ module.exports = (bot) => {
         }
     );
     bot.hears(displayStrings.fileCompareOptions.cleanFiles, async (ctx) => {
+        if (!isAllowed(ctx)) return;
         try {
             if (!session[ctx.chat.id]?.fileCompare) {
                 return await reply(
